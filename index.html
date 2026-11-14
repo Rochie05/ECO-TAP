@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F4F5EB">
+  <meta name="description" content="ECO-TAP helps communities make recycling part of everyday life.">
+  <title>ECO-TAP — Small actions, greener communities</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --forest: #174B35;
+      --leaf: #65A66F;
+      --paper: #F4F5EB;
+      --forest-soft: rgb(23 75 53 / 9%);
+      --leaf-soft: rgb(101 166 111 / 17%);
+      --paper-clear: rgb(244 245 235 / 78%);
+      --shadow: 0 22px 60px rgb(23 75 53 / 10%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--forest);
+      background: var(--paper);
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; background: var(--paper); }
+    a { color: inherit; }
+    a:focus-visible { outline: 3px solid var(--leaf); outline-offset: 4px; }
+    .wrap { width: min(1120px, calc(100% - 48px)); margin-inline: auto; }
+    .site-header { display: flex; align-items: center; justify-content: space-between; min-height: 82px; gap: 24px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 850; font-size: 1.05rem; letter-spacing: .04em; text-decoration: none; }
+    .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; color: var(--paper); background: var(--forest); }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .nav { display: flex; align-items: center; gap: 28px; font-size: .91rem; font-weight: 650; }
+    .nav a { text-decoration: none; }
+    .nav a:not(.button):hover { text-decoration: underline; text-decoration-color: var(--leaf); text-underline-offset: 5px; }
+    .button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 10px; padding: 0 20px; border: 1px solid transparent; border-radius: 999px; background: var(--forest); color: var(--paper); font-size: .94rem; font-weight: 750; text-decoration: none; transition: transform .18s ease, background-color .18s ease; }
+    .button:hover { transform: translateY(-2px); background: var(--leaf); }
+    .button svg { width: 17px; height: 17px; }
+    .button.outline { border-color: var(--forest); background: transparent; color: var(--forest); }
+    .button.outline:hover { background: var(--leaf-soft); }
+    main { overflow: hidden; }
+    .hero { position: relative; display: grid; grid-template-columns: 1.05fr .95fr; align-items: center; gap: 54px; padding: 64px 0 82px; }
+    .hero::before { position: absolute; z-index: -1; top: 0; right: -20vw; width: 75vw; height: 650px; border-radius: 50%; background: radial-gradient(ellipse, var(--leaf-soft), transparent 68%); content: ""; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; margin: 0 0 18px; color: var(--leaf); font-size: .78rem; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+    .eyebrow::before { width: 26px; height: 2px; background: currentColor; content: ""; }
+    h1 { max-width: 660px; margin: 0; font-size: clamp(3rem, 6.7vw, 5.4rem); line-height: .99; letter-spacing: -.065em; }
+    h1 span { color: var(--leaf); }
+    .hero-copy { max-width: 530px; margin: 24px 0 30px; color: rgb(23 75 53 / 78%); font-size: clamp(1rem, 1.4vw, 1.18rem); line-height: 1.75; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .hero-note { margin: 18px 0 0; color: rgb(23 75 53 / 68%); font-size: .8rem; }
+    .visual { position: relative; min-height: 430px; display: grid; place-items: center; }
+    .orbit { position: absolute; width: min(100%, 430px); aspect-ratio: 1; border: 1px solid rgb(23 75 53 / 14%); border-radius: 50%; }
+    .orbit::before, .orbit::after { position: absolute; border: 1px solid rgb(23 75 53 / 12%); border-radius: 50%; content: ""; }
+    .orbit::before { inset: 10%; }
+    .orbit::after { inset: 21%; }
+    .plant-card { position: relative; width: min(74%, 300px); aspect-ratio: .78; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgb(23 75 53 / 12%); border-radius: 46% 46% 28px 28px; background: var(--paper-clear); box-shadow: var(--shadow); }
+    .plant-card::after { position: absolute; right: 12%; bottom: 14%; left: 12%; height: 12px; border-radius: 50%; background: var(--leaf-soft); content: ""; }
+    .plant-art { width: 78%; height: 86%; color: var(--forest); }
+    .float-tag { position: absolute; display: flex; align-items: center; gap: 10px; padding: 11px 15px; border: 1px solid rgb(23 75 53 / 11%); border-radius: 16px; background: var(--paper); box-shadow: 0 12px 30px rgb(23 75 53 / 8%); font-size: .82rem; font-weight: 750; }
+    .float-tag svg { width: 21px; height: 21px; color: var(--leaf); }
+    .tag-one { top: 14%; left: 0; }
+    .tag-two { right: -2%; bottom: 17%; }
+    .section { padding: 58px 0 72px; }
+    .section-heading { max-width: 620px; margin: 0 auto 36px; text-align: center; }
+    .section-heading .eyebrow { justify-content: center; }
+    h2 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -.045em; }
+    .section-heading p { margin: 14px 0 0; color: rgb(23 75 53 / 72%); line-height: 1.7; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .step { position: relative; min-height: 220px; padding: 25px; border: 1px solid rgb(23 75 53 / 12%); border-radius: 22px; background: rgb(244 245 235 / 66%); }
+    .step-number { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 22px; border-radius: 14px; background: var(--leaf-soft); color: var(--forest); font-size: .9rem; font-weight: 850; }
+    .step h3 { margin: 0 0 9px; font-size: 1.1rem; }
+    .step p { margin: 0; color: rgb(23 75 53 / 72%); font-size: .93rem; line-height: 1.65; }
+    .portal { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 30px; margin: 10px auto 76px; padding: clamp(28px, 5vw, 54px); border-radius: 28px; background: var(--forest); color: var(--paper); }
+    .portal .eyebrow { color: var(--leaf); }
+    .portal h2 { max-width: 550px; }
+    .portal p { max-width: 540px; margin: 15px 0 0; color: rgb(244 245 235 / 78%); line-height: 1.7; }
+    .portal-action { justify-self: end; text-align: center; }
+    .portal-action .button { background: var(--paper); color: var(--forest); }
+    .portal-action .button:hover { background: var(--leaf); }
+    .portal-action small { display: block; margin-top: 12px; color: rgb(244 245 235 / 70%); font-size: .76rem; }
+    footer { padding: 24px 0 30px; border-top: 1px solid rgb(23 75 53 / 12%); color: rgb(23 75 53 / 70%); font-size: .82rem; }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .footer-inner p { margin: 0; }
+    .footer-inner a { font-weight: 700; text-decoration-color: var(--leaf); text-underline-offset: 4px; }
+    @media (max-width: 800px) {
+      .hero { grid-template-columns: 1fr; gap: 12px; padding: 54px 0 42px; }
+      .hero-copy { max-width: 620px; }
+      .visual { min-height: 365px; }
+      .orbit { width: min(100%, 360px); }
+      .steps { gap: 12px; }
+      .step { padding: 20px; }
+      .portal { grid-template-columns: 1fr; }
+      .portal-action { justify-self: start; text-align: left; }
+    }
+    @media (max-width: 580px) {
+      .wrap { width: min(100% - 32px, 1120px); }
+      .site-header { min-height: 70px; }
+      .nav { gap: 14px; }
+      .nav > a:not(.button) { display: none; }
+      .nav .button { min-height: 42px; padding-inline: 15px; font-size: .84rem; }
+      .hero { padding-top: 45px; }
+      h1 { font-size: clamp(2.8rem, 14vw, 4.2rem); }
+      .visual { min-height: 320px; }
+      .float-tag { padding: 9px 11px; font-size: .74rem; }
+      .tag-one { left: -4px; }
+      .tag-two { right: -4px; }
+      .section { padding: 40px 0 48px; }
+      .steps { grid-template-columns: 1fr; }
+      .step { min-height: 0; }
+      .step-number { margin-bottom: 14px; }
+      .portal { margin-bottom: 48px; }
+      .footer-inner { align-items: flex-start; flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="wrap site-header">
+    <a class="brand" href="#top" aria-label="ECO-TAP home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 4.5c-7.2-.3-12 2.2-13.4 6.5-1.2 3.6 1.7 6.8 5.2 6.3 4.5-.7 6.9-6.2 8.2-12.8Z"/><path d="M4.5 20c2.4-4.6 5.4-7.2 10.1-9.8"/></svg>
+      </span>
+      <span>ECO-TAP</span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <a href="#how-it-works">How it works</a>
+      <a class="button" href="portal.html">Staff demo <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="wrap hero" aria-labelledby="hero-title">
+      <div>
+        <p class="eyebrow">A community recycling idea</p>
+        <h1 id="hero-title">Small actions.<br><span>Greener</span> tomorrows.</h1>
+        <p class="hero-copy">ECO-TAP makes recycling easier to take part in. Bring recyclable bottles to a community kiosk, collect points, and help keep useful materials in circulation.</p>
+        <div class="hero-actions">
+          <a class="button" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
+          <a class="button outline" href="portal.html">Explore staff demo <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="hero-note">A simple concept for more thoughtful everyday habits.</p>
+      </div>
+      <div class="visual" aria-label="Illustration of a growing plant in a recycled container" role="img">
+        <div class="orbit" aria-hidden="true"></div>
+        <div class="plant-card" aria-hidden="true">
+          <svg class="plant-art" viewBox="0 0 260 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M130 258V111" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+            <path d="M128 170C99 169 77 151 73 119C103 118 125 136 128 170Z" fill="#65A66F" stroke="#174B35" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M132 137C136 106 159 88 190 92C185 123 164 141 132 137Z" fill="#65A66F" stroke="#174B35" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M128 213C100 211 83 195 81 169C108 169 126 184 128 213Z" fill="#65A66F" stroke="#174B35" stroke-width="5" stroke-linejoin="round"/>
+            <path d="M68 252H192L181 296C179 305 171 311 162 311H98C89 311 81 305 79 296L68 252Z" fill="#174B35"/>
+            <path d="M62 239C62 232 68 226 75 226H185C192 226 198 232 198 239V252H62V239Z" fill="#65A66F" stroke="#174B35" stroke-width="5"/>
+            <path d="M97 269H163" stroke="#F4F5EB" stroke-opacity=".75" stroke-width="5" stroke-linecap="round"/>
+            <path d="M104 284H156" stroke="#F4F5EB" stroke-opacity=".75" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="47" cy="113" r="9" fill="#65A66F"/><circle cx="211" cy="173" r="7" fill="#174B35"/><circle cx="204" cy="62" r="5" fill="#65A66F"/>
+          </svg>
+        </div>
+        <div class="float-tag tag-one"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h12l-2 13H7L5 4H3"/><path d="M9 10c1 2 2 3 4 4M10 15l3-1 1-3"/></svg>Recycle thoughtfully</div>
+        <div class="float-tag tag-two"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V11"/><path d="M12 14C7 14 5 11 5 7c4 0 7 2 7 7ZM12 11c0-4 3-7 7-7 0 4-2 7-7 7Z"/></svg>Keep materials in use</div>
+      </div>
+    </section>
+
+    <section class="wrap section" id="how-it-works" aria-labelledby="steps-title">
+      <div class="section-heading">
+        <p class="eyebrow">Three simple steps</p>
+        <h2 id="steps-title">A little effort can go a long way.</h2>
+        <p>The ECO-TAP concept connects recycling with rewards and reuse, making each step easy to understand.</p>
+      </div>
+      <div class="steps">
+        <article class="step">
+          <span class="step-number" aria-hidden="true">01</span>
+          <h3>Bring it to a kiosk</h3>
+          <p>Sort eligible recyclable bottles and place them in the appropriate kiosk section.</p>
+        </article>
+        <article class="step">
+          <span class="step-number" aria-hidden="true">02</span>
+          <h3>Collect points</h3>
+          <p>In the concept, accepted deposits can earn points that residents may redeem for rewards.</p>
+        </article>
+        <article class="step">
+          <span class="step-number" aria-hidden="true">03</span>
+          <h3>Support reuse</h3>
+          <p>Sorted materials can be tracked for collection and considered for recycling or upcycling.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap portal" aria-labelledby="portal-title">
+      <div>
+        <p class="eyebrow">For staff and administrators</p>
+        <h2 id="portal-title">Take a look inside the ECO-TAP portal.</h2>
+        <p>Explore a sample dashboard for kiosk monitoring, collection activity, schedules, and rewards. The portal uses demo data and is intended as a preview.</p>
+      </div>
+      <div class="portal-action">
+        <a class="button" href="portal.html">Open staff demo <span aria-hidden="true">↗</span></a>
+        <small>Demo sign-in details are shown on the portal page.</small>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <p><strong>ECO-TAP</strong> · Ecological Community Tracking and Award Platform</p>
+      <a href="#top">Back to top ↑</a>
+    </div>
+  </footer>
+</body>
+</html>
