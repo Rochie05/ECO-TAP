@@ -40,6 +40,18 @@ function Panel({ title, action, children, className = '' }) {
   </section>;
 }
 
+function LoadingScreen() {
+  return <main className="boot-screen" role="status" aria-live="polite">
+    <div className="boot-content">
+      <div className="boot-mark" aria-hidden="true">↻</div>
+      <strong>ECO-TAP</strong>
+      <p>Preparing your staff portal…</p>
+      <div className="boot-track" aria-hidden="true"><span /></div>
+      <a className="boot-retry" href="portal.html">Taking a while? Reload the page</a>
+    </div>
+  </main>;
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [data, setData] = useState(null);
@@ -90,7 +102,7 @@ function App() {
     finally { setBusy(false); }
   };
 
-  if (loading) return <main className="center-screen"><div className="loader" aria-label="Loading ECO-TAP" /></main>;
+  if (loading) return <LoadingScreen />;
   if (!user) return <Login login={login} setLogin={setLogin} onSubmit={handleLogin} busy={busy} error={error} />;
   if (!data) return <main className="center-screen"><div className="login-card"><p>Could not load the portal data.</p><button className="button" onClick={() => refresh().catch((err) => setError(err.message))}>Try again</button>{error && <p role="alert">{error}</p>}</div></main>;
 
@@ -117,14 +129,16 @@ function App() {
       <div className="content">
         <div className="notice-stack" aria-live="polite">{error && <div className="feedback error" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}{notice && <div className="feedback success">{notice}<button onClick={() => setNotice('')} aria-label="Dismiss message">×</button></div>}</div>
         {busy && <div className="busy-bar" aria-label="Saving changes" />}
-        {view === 'dashboard' && <Dashboard data={data} setView={setView} />}
-        {view === 'bins' && <Bins data={data} busy={busy} act={act} canManage={canManage} />}
-        {view === 'grinding' && <Grinding data={data} busy={busy} act={act} canManage={canManage} />}
-        {view === 'logs' && <Logs data={data} />}
-        {view === 'rewards' && <Rewards data={data} busy={busy} act={act} />}
-        {view === 'notifications' && <Notifications data={data} />}
-        {view === 'upcycle' && <Upcycle data={data} busy={busy} act={act} canManage={canManage} />}
-        {view === 'staff' && <Staff data={data} />}
+        <div className="view-enter" key={view}>
+          {view === 'dashboard' && <Dashboard data={data} setView={setView} />}
+          {view === 'bins' && <Bins data={data} busy={busy} act={act} canManage={canManage} />}
+          {view === 'grinding' && <Grinding data={data} busy={busy} act={act} canManage={canManage} />}
+          {view === 'logs' && <Logs data={data} />}
+          {view === 'rewards' && <Rewards data={data} busy={busy} act={act} />}
+          {view === 'notifications' && <Notifications data={data} />}
+          {view === 'upcycle' && <Upcycle data={data} busy={busy} act={act} canManage={canManage} />}
+          {view === 'staff' && <Staff data={data} />}
+        </div>
         <footer className="page-footer">ECO-TAP local demo · Do not use real resident information</footer>
       </div>
     </main>

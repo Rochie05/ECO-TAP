@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "ECO-TAP",
+    "slug": "eco-tap-mobile",
+    "scheme": "ecotap",
+    "version": "0.1.0",
+    "platforms": ["ios", "android"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F4F5EB"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": {
+        "backgroundColor": "#174B35"
+      }
+    }
+  }
+}

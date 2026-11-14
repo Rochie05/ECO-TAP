@@ -24,6 +24,22 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; min-width: 320px; background: var(--paper); }
+    .page-loader { display: none; }
+    .js .page-loader {
+      position: fixed; z-index: 20; inset: 0; display: grid; place-items: center;
+      padding: 24px; background: var(--paper); opacity: 0; visibility: hidden;
+      pointer-events: none; animation: show-page-loader 0s .4s forwards;
+    }
+    .js .page-loader.is-done { animation: none; opacity: 0; visibility: hidden; }
+    .js .page-loader.is-loading { animation: none; opacity: 1; visibility: visible; pointer-events: auto; }
+    .page-loader-inner { width: min(280px, 100%); text-align: center; }
+    .page-loader-mark { width: 62px; height: 62px; display: grid; place-items: center; margin: 0 auto 17px; border-radius: 20px; background: var(--forest); color: var(--paper); font-size: 2.5rem; }
+    .page-loader strong { display: block; font-size: 1.2rem; letter-spacing: .06em; }
+    .page-loader p { margin: 7px 0 18px; color: rgb(23 75 53 / 70%); font-size: .83rem; }
+    .page-loader-track { height: 5px; overflow: hidden; border-radius: 10px; background: var(--leaf-soft); }
+    .page-loader-track span { display: block; width: 35%; height: 100%; border-radius: inherit; background: var(--leaf); animation: loader-progress 1.25s ease-in-out infinite alternate; }
+    @keyframes show-page-loader { to { opacity: 1; visibility: visible; } }
+    @keyframes loader-progress { to { transform: translateX(185%); } }
     a { color: inherit; }
     a:focus-visible { outline: 3px solid var(--leaf); outline-offset: 4px; }
     .wrap { width: min(1120px, calc(100% - 48px)); margin-inline: auto; }
@@ -83,6 +99,54 @@
     .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
     .footer-inner p { margin: 0; }
     .footer-inner a { font-weight: 700; text-decoration-color: var(--leaf); text-underline-offset: 4px; }
+    @keyframes rise-in {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes leaf-sway {
+      from { transform: rotate(-2deg); }
+      to { transform: rotate(2deg); }
+    }
+    @keyframes gentle-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes orbit-breathe {
+      0%, 100% { transform: scale(1); opacity: .7; }
+      50% { transform: scale(1.04); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      html { scroll-behavior: smooth; }
+      .hero > div:first-child > * { animation: rise-in .7s cubic-bezier(.2,.7,.2,1) both; }
+      .hero > div:first-child > :nth-child(2) { animation-delay: .08s; }
+      .hero > div:first-child > :nth-child(3) { animation-delay: .16s; }
+      .hero > div:first-child > :nth-child(4) { animation-delay: .24s; }
+      .hero > div:first-child > :nth-child(5) { animation-delay: .32s; }
+      .visual { animation: rise-in .9s .2s both; }
+      .orbit { animation: orbit-breathe 9s ease-in-out infinite; }
+      .plant-art path:nth-child(2), .plant-art path:nth-child(3), .plant-art path:nth-child(4) {
+        transform-box: fill-box;
+        transform-origin: bottom center;
+        animation: leaf-sway 4.5s ease-in-out infinite alternate;
+      }
+      .plant-art path:nth-child(3) { animation-delay: -2s; }
+      .plant-art path:nth-child(4) { animation-delay: -1s; }
+      .float-tag { animation: gentle-float 5.5s ease-in-out infinite; }
+      .tag-two { animation-delay: -2.7s; }
+      .step { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+      .step:hover { transform: translateY(-4px); border-color: rgb(101 166 111 / 45%); box-shadow: 0 15px 30px rgb(23 75 53 / 7%); }
+      .step-number { transition: background-color .25s ease, transform .25s ease; }
+      .step:hover .step-number { background: rgb(101 166 111 / 30%); transform: rotate(-5deg); }
+      .section-heading.will-reveal, .steps.will-reveal, .portal.will-reveal {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1);
+      }
+      .section-heading.will-reveal.is-visible, .steps.will-reveal.is-visible, .portal.will-reveal.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
     @media (max-width: 800px) {
       .hero { grid-template-columns: 1fr; gap: 12px; padding: 54px 0 42px; }
       .hero-copy { max-width: 620px; }
@@ -114,10 +178,21 @@
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+      .js .page-loader { animation-delay: .4s !important; }
+      .page-loader-track span { width: 100%; animation: none !important; }
     }
   </style>
+  <script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
+  <div class="page-loader" id="page-loader" role="status" aria-live="polite">
+    <div class="page-loader-inner">
+      <div class="page-loader-mark" aria-hidden="true">↻</div>
+      <strong>ECO-TAP</strong>
+      <p>Preparing a greener tomorrow…</p>
+      <div class="page-loader-track" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
   <header class="wrap site-header">
     <a class="brand" href="#top" aria-label="ECO-TAP home">
       <span class="brand-mark" aria-hidden="true">
@@ -207,5 +282,34 @@
       <a href="#top">Back to top ↑</a>
     </div>
   </footer>
+  <script>
+    const pageLoader = document.getElementById('page-loader');
+    const finishLoading = () => pageLoader.classList.add('is-done');
+    if (document.readyState === 'complete') finishLoading();
+    else window.addEventListener('load', finishLoading, { once: true });
+    window.setTimeout(finishLoading, 8000);
+    window.addEventListener('pageshow', () => pageLoader.classList.remove('is-loading'));
+    document.querySelectorAll('a[href="portal.html"]').forEach((link) => {
+      link.addEventListener('click', (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        pageLoader.classList.add('is-loading');
+      });
+    });
+    if ('IntersectionObserver' in window && window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: .12 });
+      document.querySelectorAll('.section-heading, .steps, .portal').forEach((element) => {
+        if (element.getBoundingClientRect().top < window.innerHeight * .9) return;
+        element.classList.add('will-reveal');
+        observer.observe(element);
+      });
+    }
+  </script>
 </body>
 </html>
