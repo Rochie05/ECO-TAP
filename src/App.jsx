@@ -238,7 +238,7 @@ function Dashboard({ data, setView }) {
   ];
   const recent = [...(data.logs || [])].slice(0, 5);
   const bins = data.stations?.flatMap((station) => Object.entries(station.bins || {}).map(([key, bin]) => ({ station, key, bin }))) || [];
-  return <>
+  return <div className="overview-view">
     <div className="welcome-row"><div><p className="eyebrow">Welcome back, {data.user?.name || 'team'}</p><h2>Today at a glance</h2><p>Monitor sample collection activity and manage the next steps.</p></div><button className="button secondary" onClick={() => setView('bins')}>View kiosks <span aria-hidden="true">→</span></button></div>
     <div className="stat-grid">{cards.map(([label, value, caption]) => <article className="stat-card data-hover" key={label}><span>{label}</span><strong>{value}</strong><small>{caption}</small></article>)}</div>
     <div className="two-col">
@@ -258,7 +258,7 @@ function Dashboard({ data, setView }) {
       </div></Panel>
     </div>
     <Panel title="Recent deposits" action={<button className="text-button" onClick={() => setView('logs')}>View logs →</button>}><LogTable logs={recent} /></Panel>
-  </>;
+  </div>;
 }
 
 function Bins({ data, busy, act, canManage }) {
@@ -267,7 +267,7 @@ function Bins({ data, busy, act, canManage }) {
   return <>
     <div className="section-intro"><div><p className="eyebrow">Collection network</p><h2>Segregation kiosks</h2><p>Sample fill levels refresh when you scan the bins.</p></div>{canManage && <button className="button" disabled={busy} onClick={scan}>{busy ? 'Scanning…' : 'Scan bins now'}</button>}</div>
     {!canManage && <p className="muted">A supervisor or administrator can run a demo bin scan.</p>}
-    <div className="station-grid">{stations.map((station) => <Panel key={station.id} className="station-panel data-hover" title={<>{station.id}<span className="station-location">{station.location}</span></>} action={<Badge tone="good">{station.status}</Badge>}><div className="bin-list">{Object.entries(station.bins || {}).map(([key, bin]) => { const tone = capacityTone(bin.capacity); return <div className={`bin-row data-hover ${tone}`} key={key}><div className="bin-row-head"><div><strong>{key.toUpperCase()} · {bin.grindable ? 'Grindable' : 'Mixed materials'}</strong><small>{bin.label}</small></div><Badge tone={`capacity-${tone}`}>{capacityLabel(bin.capacity)}</Badge></div><div className={`capacity-meter large ${tone}`}><span style={{ width: `${Math.min(100, bin.capacity)}%` }} /></div><div className="bin-meta"><span>{fmt(bin.weight)} kg collected</span><span>{bin.grindable ? bin.grindingStatus : 'Not grindable'}</span></div></div>; })}</div><div className="panel-foot">{station.depositsToday} deposits today <span>Last update: {station.lastSync}</span></div></Panel>)}</div>
+    <div className="station-grid">{stations.map((station) => <Panel key={station.id} className="station-panel" title={<>{station.id}<span className="station-location">{station.location}</span></>} action={<Badge tone="good">{station.status}</Badge>}><div className="bin-list">{Object.entries(station.bins || {}).map(([key, bin]) => { const tone = capacityTone(bin.capacity); return <div className={`bin-row ${tone}`} key={key}><div className="bin-row-head"><div><strong>{key.toUpperCase()} · {bin.grindable ? 'Grindable' : 'Mixed materials'}</strong><small>{bin.label}</small></div><Badge tone={`capacity-${tone}`}>{capacityLabel(bin.capacity)}</Badge></div><div className={`capacity-meter large ${tone}`}><span style={{ width: `${Math.min(100, bin.capacity)}%` }} /></div><div className="bin-meta"><span>{fmt(bin.weight)} kg collected</span><span>{bin.grindable ? bin.grindingStatus : 'Not grindable'}</span></div></div>; })}</div><div className="panel-foot">{station.depositsToday} deposits today <span>Last update: {station.lastSync}</span></div></Panel>)}</div>
   </>;
 }
 
@@ -284,13 +284,13 @@ function Grinding({ data, busy, act, canManage }) {
     {canManage && <div className="two-col schedule-layout">
       <Panel title="Add schedule"><form className="stack-form" onSubmit={submit}>
         <label>Kiosk<select value={form.station} onChange={(e) => setForm({ ...form, station: e.target.value, bins: [] })}>{data.stations?.map((s) => <option key={s.id} value={s.id}>{s.id} · {s.location}</option>)}</select></label>
-        <fieldset><legend>Sections to grind</legend><div className="check-list">{Object.entries(grindableBins).filter(([, b]) => b.grindable).map(([id, b]) => <label className="check-row data-hover" key={id}><input type="checkbox" checked={form.bins.includes(id)} onChange={() => toggleBin(id)} /><span>{id.toUpperCase()} · {b.label}</span></label>)}</div></fieldset>
+        <fieldset><legend>Sections to grind</legend><div className="check-list">{Object.entries(grindableBins).filter(([, b]) => b.grindable).map(([id, b]) => <label className="check-row" key={id}><input type="checkbox" checked={form.bins.includes(id)} onChange={() => toggleBin(id)} /><span>{id.toUpperCase()} · {b.label}</span></label>)}</div></fieldset>
         <label>Schedule for<input type="datetime-local" required value={form.scheduledFor} onChange={(e) => setForm({ ...form, scheduledFor: e.target.value })} /></label>
         <label>Assigned staff<input required value={form.assignedStaff} onChange={(e) => setForm({ ...form, assignedStaff: e.target.value })} placeholder="Staff name" /></label>
         <label>Note <textarea rows="2" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Optional details" /></label>
         <button className="button" disabled={busy || !form.bins.length}>Add to schedule</button>
       </form></Panel>
-      <Panel title="Upcoming and recent"><div className="schedule-list">{sched.length ? sched.map((item) => <article className="schedule-item data-hover" key={item.id}><div className="schedule-head"><div><strong>{item.id} · {item.station}</strong><small>{(item.bins || []).map((b) => b.toUpperCase()).join(', ')} · {when(item.scheduledFor)}</small></div><Badge tone={item.status === 'completed' ? 'good' : item.status === 'missed' ? 'alert' : ''}>{item.status}</Badge></div><p>{item.assignedStaff}{item.note ? ` · ${item.note}` : ''}</p>{item.status === 'scheduled' && <div className="inline-actions"><button className="button small" disabled={busy} onClick={() => update(item.id, 'completed')}>Mark completed</button><button className="button outline small" disabled={busy} onClick={() => update(item.id, 'missed')}>Mark missed</button></div>}</article>) : <Empty>No grinding schedules yet.</Empty>}</div></Panel>
+      <Panel title="Upcoming and recent"><div className="schedule-list">{sched.length ? sched.map((item) => <article className="schedule-item" key={item.id}><div className="schedule-head"><div><strong>{item.id} · {item.station}</strong><small>{(item.bins || []).map((b) => b.toUpperCase()).join(', ')} · {when(item.scheduledFor)}</small></div><Badge tone={item.status === 'completed' ? 'good' : item.status === 'missed' ? 'alert' : ''}>{item.status}</Badge></div><p>{item.assignedStaff}{item.note ? ` · ${item.note}` : ''}</p>{item.status === 'scheduled' && <div className="inline-actions"><button className="button small" disabled={busy} onClick={() => update(item.id, 'completed')}>Mark completed</button><button className="button outline small" disabled={busy} onClick={() => update(item.id, 'missed')}>Mark missed</button></div>}</article>) : <Empty>No grinding schedules yet.</Empty>}</div></Panel>
     </div>}
   </>;
 }
@@ -319,17 +319,17 @@ function Rewards({ data, busy, act }) {
     <div className="section-intro"><div><p className="eyebrow">Resident points desk</p><h2>Rewards</h2><p>Look up a sample resident, select rewards, and record a redemption.</p></div></div>
     <div className="two-col rewards-layout">
       <Panel title="New redemption"><div className="stack-form"><label>Resident<select value={residentId} onChange={(e) => { setResidentId(e.target.value); setCart({}); }}><option value="">Choose resident ID</option>{data.residents?.map((r) => <option key={r.id} value={r.id}>{r.id} · {r.name}</option>)}</select></label>
-        {resident ? <div className="points-card data-hover"><span>{resident.name} · {resident.id}</span><strong>{fmt(resident.points, 0)} points</strong></div> : <p className="muted">Choose a resident to view their available points.</p>}
-        <div className="reward-list">{data.rewardItems?.map((item) => <div className="reward-row data-hover" key={item.id}><div><strong>{item.name}</strong><small>{item.cost} points</small></div><div className="stepper"><button aria-label={`Remove one ${item.name}`} disabled={!cart[item.id]} onClick={() => add(item.id, -1)}>−</button><span>{cart[item.id] || 0}</span><button aria-label={`Add one ${item.name}`} onClick={() => add(item.id, 1)}>+</button></div></div>)}</div>
+        {resident ? <div className="points-card"><span>{resident.name} · {resident.id}</span><strong>{fmt(resident.points, 0)} points</strong></div> : <p className="muted">Choose a resident to view their available points.</p>}
+        <div className="reward-list">{data.rewardItems?.map((item) => <div className="reward-row" key={item.id}><div><strong>{item.name}</strong><small>{item.cost} points</small></div><div className="stepper"><button aria-label={`Remove one ${item.name}`} disabled={!cart[item.id]} onClick={() => add(item.id, -1)}>−</button><span>{cart[item.id] || 0}</span><button aria-label={`Add one ${item.name}`} onClick={() => add(item.id, 1)}>+</button></div></div>)}</div>
         <div className="checkout-row"><span>Total</span><strong>{cost} points</strong></div><button className="button full" disabled={!resident || !cost || cost > Number(resident?.points || 0) || busy} onClick={submit}>Record redemption</button>
       </div></Panel>
-      <Panel title="Redemption history"><div className="schedule-list">{data.redemptions?.length ? data.redemptions.map((item) => <article className="schedule-item data-hover" key={item.id}><div className="schedule-head"><div><strong>{item.id}</strong><small>{item.resident} · {item.items} · {item.points} points</small></div><Badge tone={item.status === 'fulfilled' ? 'good' : ''}>{item.status}</Badge></div><p>{when(item.time)} · {item.staff}</p>{item.status === 'pending' && <button className="button small" disabled={busy} onClick={() => fulfill(item.id)}>Mark fulfilled</button>}</article>) : <Empty>No redemptions yet.</Empty>}</div></Panel>
+      <Panel title="Redemption history"><div className="schedule-list">{data.redemptions?.length ? data.redemptions.map((item) => <article className="schedule-item" key={item.id}><div className="schedule-head"><div><strong>{item.id}</strong><small>{item.resident} · {item.items} · {item.points} points</small></div><Badge tone={item.status === 'fulfilled' ? 'good' : ''}>{item.status}</Badge></div><p>{when(item.time)} · {item.staff}</p>{item.status === 'pending' && <button className="button small" disabled={busy} onClick={() => fulfill(item.id)}>Mark fulfilled</button>}</article>) : <Empty>No redemptions yet.</Empty>}</div></Panel>
     </div>
   </>;
 }
 
 function Notifications({ data }) {
-  return <><div className="section-intro"><div><p className="eyebrow">Activity and alerts</p><h2>Notifications</h2><p>Updates generated by this local demo.</p></div></div><Panel title="Recent notifications"><div className="schedule-list">{data.notifications?.length ? [...data.notifications].reverse().map((item) => <article className="notification-item data-hover" key={item.id}><div className="schedule-head"><div><strong>{item.title}</strong><small>{item.to} · {when(item.time)}</small></div><Badge>{item.type}</Badge></div><p>{item.message}</p></article>) : <Empty>No notifications yet.</Empty>}</div></Panel></>;
+  return <><div className="section-intro"><div><p className="eyebrow">Activity and alerts</p><h2>Notifications</h2><p>Updates generated by this local demo.</p></div></div><Panel title="Recent notifications"><div className="schedule-list">{data.notifications?.length ? [...data.notifications].reverse().map((item) => <article className="notification-item" key={item.id}><div className="schedule-head"><div><strong>{item.title}</strong><small>{item.to} · {when(item.time)}</small></div><Badge>{item.type}</Badge></div><p>{item.message}</p></article>) : <Empty>No notifications yet.</Empty>}</div></Panel></>;
 }
 
 function Upcycle({ data, busy, act, canManage }) {
