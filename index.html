@@ -83,7 +83,8 @@
     h2 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; letter-spacing: -.045em; }
     .section-heading p { margin: 14px 0 0; color: rgb(23 75 53 / 72%); line-height: 1.7; }
     .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .step { position: relative; min-height: 220px; padding: 25px; border: 1px solid rgb(23 75 53 / 12%); border-radius: 22px; background: rgb(244 245 235 / 66%); }
+    .step { position: relative; min-height: 220px; padding: 25px; border: 1px solid rgb(23 75 53 / 12%); border-radius: 22px; background: rgb(244 245 235 / 66%); transition: background-color .25s ease; }
+    .step:hover, .step:active { background-color: rgb(101 166 111 / 28%); }
     .step-number { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 22px; border-radius: 14px; background: var(--leaf-soft); color: var(--forest); font-size: .9rem; font-weight: 850; }
     .step h3 { margin: 0 0 9px; font-size: 1.1rem; }
     .step p { margin: 0; color: rgb(23 75 53 / 72%); font-size: .93rem; line-height: 1.65; }
@@ -133,7 +134,7 @@
       .plant-art path:nth-child(4) { animation-delay: -1s; }
       .float-tag { animation: gentle-float 5.5s ease-in-out infinite; }
       .tag-two { animation-delay: -2.7s; }
-      .step { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+      .step { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background-color .25s ease; }
       .step:hover { transform: translateY(-4px); border-color: rgb(101 166 111 / 45%); box-shadow: 0 15px 30px rgb(23 75 53 / 7%); }
       .step-number { transition: background-color .25s ease, transform .25s ease; }
       .step:hover .step-number { background: rgb(101 166 111 / 30%); transform: rotate(-5deg); }
