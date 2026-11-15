@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 const NAV = [
   ['dashboard', 'Overview', 'bx-grid-alt'], ['bins', 'Kiosk Bins', 'bx-trash'],
@@ -67,6 +67,11 @@ function LoadingScreen() {
   </main>;
 }
 
+function ToastMessage({ message }) {
+  if (!message) return null;
+  return <div className="toast-message" role="status" aria-live="polite"><i className="bx bx-check-circle" aria-hidden="true" />{message}</div>;
+}
+
 function App() {
   const [user, setUser] = useState(null);
   const [data, setData] = useState(null);
@@ -78,7 +83,9 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
   const [login, setLogin] = useState({ username: 'maria', password: 'eco123' });
+  const logoutDialogRef = useRef(null);
   const sidebarCollapsed = sidebarWidth <= SIDEBAR_COLLAPSED_THRESHOLD;
 
   useEffect(() => {
@@ -97,6 +104,12 @@ function App() {
       tabletViewport.removeEventListener('change', updateSidebarWidth);
     };
   }, []);
+
+  useEffect(() => {
+    if (!toastMessage) return undefined;
+    const timeout = window.setTimeout(() => setToastMessage(''), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [toastMessage]);
 
   const clampSidebarWidth = (width) => Math.min(sidebarMaxWidth, Math.max(SIDEBAR_MIN_WIDTH, width));
   const handleResizePointerDown = (event) => {
@@ -152,20 +165,20 @@ function App() {
     event.preventDefault(); setBusy(true); setError('');
     try {
       const result = await api('/api/login', { method: 'POST', body: login });
-      const next = await api('/api/bootstrap'); setData(next); setUser(next.user || result.user); setView('dashboard');
+      const next = await api('/api/bootstrap'); setData(next); setUser(next.user || result.user); setView('dashboard'); setToastMessage('Signed in successfully.');
     } catch (err) { setError(err.message || 'Unable to sign in.'); }
     finally { setBusy(false); setLoading(false); }
   };
 
   const handleLogout = async () => {
     setBusy(true); setError('');
-    try { await api('/api/logout', { method: 'POST' }); setUser(null); setData(null); }
+    try { await api('/api/logout', { method: 'POST' }); setUser(null); setData(null); setToastMessage('Signed out successfully.'); }
     catch (err) { setError(err.message || 'Unable to sign out.'); }
     finally { setBusy(false); }
   };
 
   if (loading) return <LoadingScreen />;
-  if (!user) return <Login login={login} setLogin={setLogin} onSubmit={handleLogin} busy={busy} error={error} />;
+  if (!user) return <><Login login={login} setLogin={setLogin} onSubmit={handleLogin} busy={busy} error={error} /><ToastMessage message={toastMessage} /></>;
   if (!data) return <main className="center-screen"><div className="login-card"><p>Could not load the portal data.</p><button className="button" onClick={() => refresh().catch((err) => setError(err.message))}>Try again</button>{error && <p role="alert">{error}</p>}</div></main>;
 
   const title = NAV.find(([id]) => id === view)?.[1] || 'Overview';
@@ -190,7 +203,7 @@ function App() {
       <div className="profile">
         <div className="avatar" aria-hidden="true">{user.initials || user.name?.slice(0, 2).toUpperCase()}</div>
         <div className="profile-copy"><strong>{user.name}</strong><span>{user.role}</span></div>
-        <button className="icon-button" onClick={handleLogout} disabled={busy} aria-label="Log out"><i className="bx bx-log-out" aria-hidden="true" /></button>
+        <button className="icon-button" onClick={() => logoutDialogRef.current?.showModal()} disabled={busy} aria-label="Log out"><i className="bx bx-log-out" aria-hidden="true" /></button>
       </div>
       <div className={`sidebar-resizer ${isResizingSidebar ? 'active' : ''}`} role="separator" aria-label="Resize sidebar" aria-orientation="vertical" aria-valuemin={SIDEBAR_MIN_WIDTH} aria-valuemax={sidebarMaxWidth} aria-valuenow={Math.round(sidebarWidth)} aria-valuetext={sidebarCollapsed ? 'Icons only' : `${Math.round(sidebarWidth)} pixels`} tabIndex={0} onPointerDown={handleResizePointerDown} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} onKeyDown={handleResizeKeyDown} />
     </aside>
@@ -212,6 +225,34 @@ function App() {
         <footer className="page-footer">ECO-TAP local demo · Do not use real resident information</footer>
       </div>
     </main>
+    <dialog
+      ref={logoutDialogRef}
+      className="signout-dialog"
+      aria-modal="true"
+      aria-labelledby="signout-title"
+      aria-describedby="signout-description"
+      onCancel={(event) => {
+        event.preventDefault();
+        event.currentTarget.close();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.currentTarget.close();
+        }
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      }}
+    >
+      <h2 id="signout-title">Sign out?</h2>
+      <p id="signout-description">Are you sure you want to sign out of the ECO-TAP staff portal?</p>
+      <div className="signout-actions">
+        <button className="signout-cancel" type="button" autoFocus onClick={() => logoutDialogRef.current?.close()}>Cancel</button>
+        <button className="signout-confirm" type="button" disabled={busy} onClick={() => { logoutDialogRef.current?.close(); handleLogout(); }}>Sign Out</button>
+      </div>
+    </dialog>
+    <ToastMessage message={toastMessage} />
   </div>;
 }
 

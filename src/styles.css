@@ -80,6 +80,18 @@ input::placeholder, textarea::placeholder { color: var(--ink-soft); opacity: .7;
 .profile-copy span { color: var(--leaf); font-size: .69rem; }
 .icon-button { width: 34px; height: 34px; margin-left: auto; border: 1px solid rgb(244 245 235 / 30%); border-radius: 9px; background: transparent; color: var(--paper); cursor: pointer; }
 .icon-button:hover { background: rgb(244 245 235 / 10%); }
+.signout-dialog { width: min(420px, calc(100% - 32px)); max-width: calc(100% - 32px); margin: auto; padding: 26px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--forest); box-shadow: 0 24px 70px rgb(23 75 53 / 24%); }
+.signout-dialog::backdrop { background: rgb(10 25 17 / 42%); backdrop-filter: blur(12px); }
+.signout-dialog h2 { margin: 0; font-size: 1.15rem; letter-spacing: -.025em; }
+.signout-dialog p { margin: 8px 0 24px; color: var(--ink-soft); font-size: .86rem; line-height: 1.5; }
+.signout-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.signout-actions button { min-width: 108px; min-height: 42px; padding: 0 16px; border-radius: 10px; font-size: .83rem; font-weight: 750; white-space: nowrap; cursor: pointer; transition: background-color .15s ease, border-color .15s ease; }
+.signout-cancel { border: 1px solid var(--line); background: #fff; color: var(--forest); }
+.signout-cancel:hover { border-color: var(--forest); background: #fff; }
+.signout-confirm { border: 1px solid var(--forest); background: var(--forest); color: #fff; }
+.signout-confirm:hover:not(:disabled) { border-color: #205D43; background: #205D43; color: #fff; }
+.toast-message { position: fixed; z-index: 1000; right: 24px; bottom: 24px; display: flex; width: max-content; max-width: calc(100vw - 32px); align-items: center; gap: 9px; padding: 12px 16px; border: 1px solid rgb(244 245 235 / 20%); border-radius: 12px; background: var(--forest); box-shadow: 0 12px 32px rgb(23 75 53 / 24%); color: #fff; font-size: .82rem; font-weight: 650; line-height: 1.4; pointer-events: none; }
+.toast-message i { color: #A6D4A8; font-size: 1.1rem; }
 .sidebar-collapsed .sidebar { padding-inline: 8px; }
 .sidebar-collapsed .sidebar-header { gap: 0; }
 .sidebar-collapsed .sidebar .brand { gap: 0; padding: 0; }
@@ -275,6 +287,7 @@ textarea { resize: vertical; }
   .content { padding: 22px 16px 14px; }
   .welcome-row, .section-intro { align-items: flex-start; flex-direction: column; gap: 14px; }
   .section-intro .button { align-self: stretch; }
+  .toast-message { right: auto; bottom: calc(16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); }
   .capacity-row { grid-template-columns: minmax(110px, 1.2fr) minmax(65px, 1fr) 36px; gap: 8px; }
   .overview-view .panel .table-wrap { width: calc(100% + 32px); margin-inline: -16px; }
   .overview-view .panel .data-hover:hover, .overview-view .panel .data-hover:active, .overview-view .panel .data-hover:focus-within { box-shadow: -16px 0 0 var(--hover-fill), 16px 0 0 var(--hover-fill); }
@@ -283,6 +296,8 @@ textarea { resize: vertical; }
 @media (max-width: 460px) {
   .stat-grid { gap: 9px; }
   .stat-card { min-height: 112px; padding: 13px; }
+  .signout-dialog { padding: 22px; }
+  .signout-actions button { min-width: 0; flex: 1; }
   .stat-card strong { font-size: 1.3rem; }
   .topbar-user { font-size: 0; gap: 6px; }
   .topbar-user .avatar { font-size: .67rem; }
