@@ -172,7 +172,7 @@ function App() {
 
   const handleLogout = async () => {
     setBusy(true); setError('');
-    try { await api('/api/logout', { method: 'POST' }); setUser(null); setData(null); setToastMessage('Signed out successfully.'); }
+    try { await api('/api/logout', { method: 'POST' }); setUser(null); setData(null); setLogin({ username: '', password: '' }); setToastMessage('Signed out successfully.'); }
     catch (err) { setError(err.message || 'Unable to sign out.'); }
     finally { setBusy(false); }
   };
@@ -191,6 +191,7 @@ function App() {
         <button className="sidebar-toggle" type="button" onClick={() => setSidebarWidth(sidebarCollapsed ? sidebarMaxWidth : SIDEBAR_MIN_WIDTH)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed} aria-controls="portal-navigation">
           <i className={`bx ${sidebarCollapsed ? 'bx-chevron-right' : 'bx-chevron-left'}`} aria-hidden="true" />
         </button>
+        <div className="mobile-account-actions"><span className="avatar small">{user.initials}</span><button className="icon-button mobile-signout" onClick={() => logoutDialogRef.current?.showModal()} disabled={busy} aria-label="Log out"><i className="bx bx-log-out" aria-hidden="true" /></button></div>
       </div>
       <nav id="portal-navigation" aria-label="Portal sections" className="side-nav">
         {NAV.map(([id, label, icon]) => {
@@ -246,7 +247,7 @@ function App() {
       }}
     >
       <h2 id="signout-title">Sign out?</h2>
-      <p id="signout-description">Are you sure you want to sign out of the ECO-TAP staff portal?</p>
+      <p id="signout-description">Are you sure you want to sign out?</p>
       <div className="signout-actions">
         <button className="signout-cancel" type="button" autoFocus onClick={() => logoutDialogRef.current?.close()}>Cancel</button>
         <button className="signout-confirm" type="button" disabled={busy} onClick={() => { logoutDialogRef.current?.close(); handleLogout(); }}>Sign Out</button>
@@ -340,7 +341,7 @@ function Logs({ data }) {
   const [query, setQuery] = useState('');
   const logs = useMemo(() => (data.logs || []).filter((row) => Object.values(row).join(' ').toLowerCase().includes(query.toLowerCase())), [data.logs, query]);
   const total = logs.reduce((n, item) => n + Number(item.weight || 0), 0);
-  return <><div className="section-intro"><div><p className="eyebrow">Deposit history</p><h2>Collection logs</h2><p>{logs.length} deposits · {fmt(total)} kg in the current list</p></div><label className="search-field"><span className="sr-only">Search collection logs</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search logs" /></label></div><Panel title="Deposits"><LogTable logs={logs} /></Panel></>;
+  return <div className="logs-view"><div className="section-intro"><div><p className="eyebrow">Deposit history</p><h2>Collection logs</h2><p>{logs.length} deposits · {fmt(total)} kg in the current list</p></div><label className="search-field"><span className="sr-only">Search collection logs</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search logs" /></label></div><Panel title="Deposits"><LogTable logs={logs} /></Panel></div>;
 }
 
 function LogTable({ logs }) {

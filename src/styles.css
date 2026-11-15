@@ -80,6 +80,8 @@ input::placeholder, textarea::placeholder { color: var(--ink-soft); opacity: .7;
 .profile-copy span { color: var(--leaf); font-size: .69rem; }
 .icon-button { width: 34px; height: 34px; margin-left: auto; border: 1px solid rgb(244 245 235 / 30%); border-radius: 9px; background: transparent; color: var(--paper); cursor: pointer; }
 .icon-button:hover { background: rgb(244 245 235 / 10%); }
+.mobile-account-actions { display: none; }
+.mobile-signout { display: none; }
 .signout-dialog { width: min(420px, calc(100% - 32px)); max-width: calc(100% - 32px); margin: auto; padding: 26px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); color: var(--forest); box-shadow: 0 24px 70px rgb(23 75 53 / 24%); }
 .signout-dialog::backdrop { background: rgb(10 25 17 / 42%); backdrop-filter: blur(12px); }
 .signout-dialog h2 { margin: 0; font-size: 1.15rem; letter-spacing: -.025em; }
@@ -169,12 +171,16 @@ input::placeholder, textarea::placeholder { color: var(--ink-soft); opacity: .7;
 .text-button:hover { color: var(--leaf); }
 .table-wrap { width: 100%; overflow-x: auto; }
 .overview-view .panel .table-wrap { width: calc(100% + 40px); margin-inline: -20px; }
+.logs-view .panel:hover, .logs-view .panel:focus-within { background-color: var(--paper); }
+.logs-view .panel .table-wrap { width: calc(100% + 40px); margin-inline: -20px; }
 table { width: 100%; border-collapse: collapse; text-align: left; font-size: .75rem; }
 th, td { padding: 11px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th { color: var(--ink-soft); font-size: .68rem; font-weight: 750; }
 tbody tr:last-child td { border-bottom: 0; }
 .overview-view .log-row > td { transition: background-color .18s ease; }
 .overview-view .log-row:hover > td, .overview-view .log-row:active > td { background-color: var(--leaf-hover); }
+.logs-view .log-row > td { transition: background-color .18s ease; }
+.logs-view .log-row:hover > td, .logs-view .log-row:active > td { background-color: var(--leaf-hover); }
 .section-intro { align-items: flex-end; }
 .section-intro .button { flex-shrink: 0; }
 .station-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 410px), 1fr)); gap: 16px; }
@@ -277,19 +283,25 @@ textarea { resize: vertical; }
   .sidebar-collapsed .sidebar-toggle { flex-basis: 34px; width: 34px; height: 34px; }
   .sidebar .brand-mark { width: 36px; height: 36px; }
   .profile { display: none; }
+  .mobile-account-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; margin-left: auto; }
   .side-nav { display: flex; width: 100%; gap: 5px; margin-top: 13px; overflow-x: auto; padding-bottom: 3px; }
   .sidebar-collapsed .side-nav { display: flex; }
   .sidebar-collapsed .nav-item { flex: 0 0 42px; width: 42px; min-height: 38px; padding: 7px; }
   .nav-item { flex: 0 0 auto; width: auto; min-height: 38px; padding: 7px 10px; font-size: .74rem; white-space: nowrap; }
   .nav-icon { width: auto; }
+  .topbar-user { display: none; }
   .topbar { min-height: 68px; padding: 12px 18px; }
   .topbar h1 { font-size: 1.08rem; }
+  .mobile-signout { display: grid; width: 34px; min-width: 34px; height: 34px; flex: 0 0 34px; place-items: center; margin-left: 0; padding: 0; border-color: rgb(244 245 235 / 30%); background: transparent; color: var(--paper); }
+  .mobile-signout:hover { background: rgb(244 245 235 / 10%); }
+  .mobile-signout i { font-size: 1rem; }
   .content { padding: 22px 16px 14px; }
   .welcome-row, .section-intro { align-items: flex-start; flex-direction: column; gap: 14px; }
   .section-intro .button { align-self: stretch; }
   .toast-message { right: auto; bottom: calc(16px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); }
   .capacity-row { grid-template-columns: minmax(110px, 1.2fr) minmax(65px, 1fr) 36px; gap: 8px; }
   .overview-view .panel .table-wrap { width: calc(100% + 32px); margin-inline: -16px; }
+  .logs-view .panel .table-wrap { width: calc(100% + 32px); margin-inline: -16px; }
   .overview-view .panel .data-hover:hover, .overview-view .panel .data-hover:active, .overview-view .panel .data-hover:focus-within { box-shadow: -16px 0 0 var(--hover-fill), 16px 0 0 var(--hover-fill); }
   .panel { padding: 16px; }
 }
