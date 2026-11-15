@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const NAV = [
-  ['dashboard', 'Overview', '⌂'], ['bins', 'Kiosk bins', '▤'],
-  ['grinding', 'Grinding schedule', '↻'], ['logs', 'Collection logs', '≡'],
-  ['rewards', 'Rewards desk', '◇'], ['notifications', 'Notifications', '◉'],
-  ['upcycle', 'Upcycled output', '♧'], ['staff', 'Staff', '♙'],
+  ['dashboard', 'Overview', 'bx-grid-alt'], ['bins', 'Kiosk Bins', 'bx-trash'],
+  ['grinding', 'Grinding Schedule', 'bx-calendar-check'], ['logs', 'Collection Logs', 'bx-list-ul'],
+  ['rewards', 'Rewards Desk', 'bx-gift'], ['notifications', 'Notifications', 'bx-bell'],
+  ['upcycle', 'Upcycled Output', 'bx-recycle'], ['staff', 'Staff', 'bx-group'],
 ];
 
 async function api(path, options = {}) {
@@ -43,7 +43,7 @@ function Panel({ title, action, children, className = '' }) {
 function LoadingScreen() {
   return <main className="boot-screen" role="status" aria-live="polite">
     <div className="boot-content">
-      <div className="boot-mark" aria-hidden="true">↻</div>
+      <div className="boot-mark" aria-hidden="true"><i className="bx bx-recycle" /></div>
       <strong>ECO-TAP</strong>
       <p>Preparing your staff portal…</p>
       <div className="boot-track" aria-hidden="true"><span /></div>
@@ -56,11 +56,22 @@ function App() {
   const [user, setUser] = useState(null);
   const [data, setData] = useState(null);
   const [view, setView] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [login, setLogin] = useState({ username: 'maria', password: 'eco123' });
+
+  useEffect(() => {
+    const mobileViewport = window.matchMedia('(max-width: 720px)');
+    const expandSidebarOnMobile = () => {
+      if (mobileViewport.matches) setSidebarCollapsed(false);
+    };
+    expandSidebarOnMobile();
+    mobileViewport.addEventListener('change', expandSidebarOnMobile);
+    return () => mobileViewport.removeEventListener('change', expandSidebarOnMobile);
+  }, []);
 
   const refresh = useCallback(async () => {
     const next = await api('/api/bootstrap');
@@ -109,19 +120,26 @@ function App() {
   const title = NAV.find(([id]) => id === view)?.[1] || 'Overview';
   const unread = data.notifications?.length || 0;
   const canManage = ['supervisor', 'administrator', 'admin'].includes(String(user.role).toLowerCase());
-  return <div className="app-shell">
+  return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
     <aside className="sidebar">
-      <a className="brand" href="/" aria-label="ECO-TAP home"><span className="brand-mark">↻</span><span>ECO-TAP<small>STAFF PORTAL</small></span></a>
-      <div className="demo-label"><strong>Demo workspace</strong><span>Sample data · resets when server data is cleared</span></div>
-      <nav aria-label="Portal sections" className="side-nav">
-        {NAV.map(([id, label, icon]) => <button key={id} className={`nav-item ${view === id ? 'selected' : ''}`} onClick={() => { setView(id); setError(''); setNotice(''); }} aria-current={view === id ? 'page' : undefined}>
-          <span aria-hidden="true" className="nav-icon">{icon}</span><span>{label}</span>{id === 'notifications' && unread > 0 && <span className="nav-count">{unread}</span>}
-        </button>)}
+      <div className="sidebar-header">
+        <a className="brand" href="/" aria-label="ECO-TAP home"><span className="brand-mark"><i className="bx bx-recycle" aria-hidden="true" /></span><span>ECO-TAP<small>STAFF PORTAL</small></span></a>
+        <button className="sidebar-toggle" type="button" onClick={() => setSidebarCollapsed((collapsed) => !collapsed)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed} aria-controls="portal-navigation">
+          <i className={`bx ${sidebarCollapsed ? 'bx-chevron-right' : 'bx-chevron-left'}`} aria-hidden="true" />
+        </button>
+      </div>
+      <nav id="portal-navigation" aria-label="Portal sections" className="side-nav">
+        {NAV.map(([id, label, icon]) => {
+          const accessibleLabel = id === 'notifications' && unread > 0 ? `${label}, ${unread} unread` : label;
+          return <button key={id} className={`nav-item ${view === id ? 'selected' : ''}`} onClick={() => { setView(id); setError(''); setNotice(''); }} aria-current={view === id ? 'page' : undefined} aria-label={accessibleLabel} title={accessibleLabel}>
+            <i className={`bx ${icon} nav-icon`} aria-hidden="true" /><span className={sidebarCollapsed ? 'sr-only' : undefined}>{label}</span>{id === 'notifications' && unread > 0 && <span className="nav-count">{unread}</span>}
+          </button>;
+        })}
       </nav>
       <div className="profile">
         <div className="avatar" aria-hidden="true">{user.initials || user.name?.slice(0, 2).toUpperCase()}</div>
         <div className="profile-copy"><strong>{user.name}</strong><span>{user.role}</span></div>
-        <button className="icon-button" onClick={handleLogout} disabled={busy} aria-label="Log out">↗</button>
+        <button className="icon-button" onClick={handleLogout} disabled={busy} aria-label="Log out"><i className="bx bx-log-out" aria-hidden="true" /></button>
       </div>
     </aside>
     <main className="main-area">
