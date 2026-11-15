@@ -6,6 +6,10 @@ const NAV = [
   ['rewards', 'Rewards Desk', 'bx-gift'], ['notifications', 'Notifications', 'bx-bell'],
   ['upcycle', 'Upcycled Output', 'bx-recycle'], ['staff', 'Staff', 'bx-group'],
 ];
+const SIDEBAR_MIN_WIDTH = 76;
+const SIDEBAR_MAX_WIDTH = 252;
+const SIDEBAR_TABLET_MAX_WIDTH = 220;
+const SIDEBAR_COLLAPSED_THRESHOLD = 210;
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -56,22 +60,58 @@ function App() {
   const [user, setUser] = useState(null);
   const [data, setData] = useState(null);
   const [view, setView] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX_WIDTH);
+  const [sidebarMaxWidth, setSidebarMaxWidth] = useState(SIDEBAR_MAX_WIDTH);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [login, setLogin] = useState({ username: 'maria', password: 'eco123' });
+  const sidebarCollapsed = sidebarWidth <= SIDEBAR_COLLAPSED_THRESHOLD;
 
   useEffect(() => {
     const mobileViewport = window.matchMedia('(max-width: 720px)');
-    const expandSidebarOnMobile = () => {
-      if (mobileViewport.matches) setSidebarCollapsed(false);
+    const tabletViewport = window.matchMedia('(min-width: 721px) and (max-width: 1050px)');
+    const updateSidebarWidth = () => {
+      const maxWidth = tabletViewport.matches ? SIDEBAR_TABLET_MAX_WIDTH : SIDEBAR_MAX_WIDTH;
+      setSidebarMaxWidth(maxWidth);
+      setSidebarWidth((currentWidth) => mobileViewport.matches ? SIDEBAR_MAX_WIDTH : Math.min(currentWidth, maxWidth));
     };
-    expandSidebarOnMobile();
-    mobileViewport.addEventListener('change', expandSidebarOnMobile);
-    return () => mobileViewport.removeEventListener('change', expandSidebarOnMobile);
+    updateSidebarWidth();
+    mobileViewport.addEventListener('change', updateSidebarWidth);
+    tabletViewport.addEventListener('change', updateSidebarWidth);
+    return () => {
+      mobileViewport.removeEventListener('change', updateSidebarWidth);
+      tabletViewport.removeEventListener('change', updateSidebarWidth);
+    };
   }, []);
+
+  const clampSidebarWidth = (width) => Math.min(sidebarMaxWidth, Math.max(SIDEBAR_MIN_WIDTH, width));
+  const handleResizePointerDown = (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsResizingSidebar(true);
+    setSidebarWidth(clampSidebarWidth(event.clientX));
+  };
+  const handleResizePointerMove = (event) => {
+    if (isResizingSidebar) setSidebarWidth(clampSidebarWidth(event.clientX));
+  };
+  const handleResizePointerUp = (event) => {
+    setIsResizingSidebar(false);
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+  const handleResizeKeyDown = (event) => {
+    const step = event.shiftKey ? 24 : 10;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      setSidebarWidth((width) => clampSidebarWidth(width + (event.key === 'ArrowRight' ? step : -step)));
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      setSidebarWidth(event.key === 'Home' ? SIDEBAR_MIN_WIDTH : sidebarMaxWidth);
+    }
+  };
 
   const refresh = useCallback(async () => {
     const next = await api('/api/bootstrap');
@@ -120,11 +160,11 @@ function App() {
   const title = NAV.find(([id]) => id === view)?.[1] || 'Overview';
   const unread = data.notifications?.length || 0;
   const canManage = ['supervisor', 'administrator', 'admin'].includes(String(user.role).toLowerCase());
-  return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+  return <div className={`app-shell ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isResizingSidebar ? 'sidebar-resizing' : ''}`} style={{ '--sidebar-width': `${sidebarWidth}px` }}>
     <aside className="sidebar">
       <div className="sidebar-header">
         <a className="brand" href="/" aria-label="ECO-TAP home"><span className="brand-mark"><i className="bx bx-recycle" aria-hidden="true" /></span><span>ECO-TAP<small>STAFF PORTAL</small></span></a>
-        <button className="sidebar-toggle" type="button" onClick={() => setSidebarCollapsed((collapsed) => !collapsed)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed} aria-controls="portal-navigation">
+        <button className="sidebar-toggle" type="button" onClick={() => setSidebarWidth(sidebarCollapsed ? sidebarMaxWidth : SIDEBAR_MIN_WIDTH)} aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!sidebarCollapsed} aria-controls="portal-navigation">
           <i className={`bx ${sidebarCollapsed ? 'bx-chevron-right' : 'bx-chevron-left'}`} aria-hidden="true" />
         </button>
       </div>
@@ -141,6 +181,7 @@ function App() {
         <div className="profile-copy"><strong>{user.name}</strong><span>{user.role}</span></div>
         <button className="icon-button" onClick={handleLogout} disabled={busy} aria-label="Log out"><i className="bx bx-log-out" aria-hidden="true" /></button>
       </div>
+      <div className={`sidebar-resizer ${isResizingSidebar ? 'active' : ''}`} role="separator" aria-label="Resize sidebar" aria-orientation="vertical" aria-valuemin={SIDEBAR_MIN_WIDTH} aria-valuemax={sidebarMaxWidth} aria-valuenow={Math.round(sidebarWidth)} aria-valuetext={sidebarCollapsed ? 'Icons only' : `${Math.round(sidebarWidth)} pixels`} tabIndex={0} onPointerDown={handleResizePointerDown} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} onPointerCancel={handleResizePointerUp} onKeyDown={handleResizeKeyDown} />
     </aside>
     <main className="main-area">
       <header className="topbar"><div><p className="eyebrow">Community recycling operations</p><h1>{title}</h1></div><div className="topbar-user"><span className="online-dot" /> Demo mode <span className="avatar small">{user.initials}</span></div></header>

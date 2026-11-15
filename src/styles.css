@@ -44,9 +44,14 @@ input::placeholder, textarea::placeholder { color: var(--ink-soft); opacity: .7;
 .demo-credentials span { color: var(--ink-soft); }
 .small-note { margin: 16px 0 0; color: var(--ink-soft); font-size: .76rem; line-height: 1.5; }
 .form-error { color: var(--forest); font-size: .84rem; font-weight: 700; }
-.app-shell { min-height: 100vh; display: grid; grid-template-columns: 252px minmax(0, 1fr); transition: grid-template-columns .25s ease; }
-.app-shell.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+.app-shell { --sidebar-width: 252px; min-height: 100vh; display: grid; grid-template-columns: minmax(76px, var(--sidebar-width)) minmax(0, 1fr); transition: grid-template-columns .25s ease; }
+.app-shell.sidebar-resizing { transition: none; cursor: col-resize; user-select: none; }
+.app-shell.sidebar-resizing * { cursor: col-resize !important; user-select: none; }
 .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 24px 16px 14px; background: var(--forest); color: var(--paper); }
+.sidebar-resizer { position: absolute; z-index: 5; top: 0; right: -5px; width: 10px; height: 100%; touch-action: none; cursor: col-resize; }
+.sidebar-resizer::after { position: absolute; top: 0; right: 4px; bottom: 0; width: 2px; background: transparent; content: ''; transition: background-color .15s ease; }
+.sidebar-resizer:hover::after, .sidebar-resizer:focus-visible::after, .sidebar-resizer.active::after { background: var(--leaf); }
+.sidebar-resizer:focus-visible { outline: 3px solid var(--leaf); outline-offset: -3px; }
 .sidebar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 24px; }
 .sidebar .brand { min-width: 0; padding: 0 6px; color: var(--paper); }
 .sidebar .brand small { color: var(--leaf); }
@@ -214,7 +219,6 @@ textarea { resize: vertical; }
 .page-footer { padding: 14px 0 8px; color: var(--ink-soft); text-align: center; font-size: .68rem; }
 
 @media (max-width: 1050px) {
-  .app-shell { grid-template-columns: 220px minmax(0, 1fr); }
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .two-col, .schedule-layout, .rewards-layout { grid-template-columns: minmax(0, 1fr); }
 }
@@ -223,6 +227,7 @@ textarea { resize: vertical; }
   .app-shell { display: block; }
   .app-shell.sidebar-collapsed { display: block; }
   .sidebar-toggle { display: none; }
+  .sidebar-resizer { display: none; }
   .sidebar { position: static; width: 100%; height: auto; padding: 13px 16px 10px; }
   .sidebar-collapsed .sidebar { width: 100%; padding: 13px 16px 10px; }
   .sidebar-header { gap: 8px; margin-bottom: 0; }
