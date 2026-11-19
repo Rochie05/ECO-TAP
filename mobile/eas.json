@@ -6,10 +6,11 @@
       "distribution": "internal",
       "android": { "buildType": "apk" }
     },
-    "preview": {
-      "distribution": "internal",
-      "android": { "buildType": "apk" }
-    },
+"preview": {
+  "distribution": "internal",
+  "android": { "buildType": "apk" },
+  "env": { "EXPO_PUBLIC_API_URL": "https://eco-tap.onrender.com" }
+},
     "production": {
       "android": { "buildType": "app-bundle" }
     }
