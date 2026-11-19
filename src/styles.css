@@ -231,3 +231,13 @@ textarea { resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Waste analytics bar chart */
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; min-height: 220px; overflow-x: auto; padding: 4px 2px 0; }
+.bar-col { flex: 1 0 34px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 34px; }
+.bar-track { width: 100%; height: 150px; display: flex; align-items: flex-end; border-radius: 8px; background: var(--leaf-soft); overflow: hidden; }
+.bar-fill { width: 100%; min-height: 0; border-radius: 8px 8px 0 0; background: var(--leaf); }
+.bar-value { min-height: 1em; font-size: .62rem; font-weight: 700; }
+.bar-label { color: var(--ink-soft); font-size: .6rem; white-space: nowrap; }
+.badge.crit { background: rgb(176 52 52 / 14%); color: #8a2323; }
+.inline-actions.flush { margin-top: 0; align-items: center; }

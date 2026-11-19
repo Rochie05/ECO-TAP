@@ -3,20 +3,47 @@
     "name": "ECO-TAP",
     "slug": "eco-tap-mobile",
     "scheme": "ecotap",
-    "version": "0.1.0",
-    "platforms": ["ios", "android"],
+    "version": "1.0.0",
+    "platforms": [
+      "android"
+    ],
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#F4F5EB"
     },
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
-      "edgeToEdgeEnabled": true,
+      "package": "com.ecotap.resident",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#174B35"
+      },
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.NFC"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "Read your ECO-TAP card to sign in.",
+          "includeNdefEntitlement": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e0bbdc4e-c2b6-401e-a053-ed7b5ab34a2e"
       }
     }
   }
