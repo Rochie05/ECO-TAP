@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, BackHandler, KeyboardAvoidingView, Pressable, RefreshControl,
+  BackHandler, Image, KeyboardAvoidingView, Pressable, RefreshControl,
   ScrollView, StatusBar, StyleSheet, Text, View,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { api, configure, setToken, setUnauthorizedHandler } from './src/api';
-import { loadSettings } from './src/config';
+import { api, setToken, setUnauthorizedHandler } from './src/api';
 import { useDeposit } from './src/useDeposit';
 import { Banner } from './src/components';
 import { C } from './src/theme';
@@ -27,7 +26,6 @@ export default function App() {
 
 function Root() {
   const insets = useSafeAreaInsets();
-  const [settings, setSettings] = useState(null);
   const [resident, setResident] = useState(null);
   const [deposits, setDeposits] = useState([]);
   const [redemptions, setRedemptions] = useState([]);
@@ -42,10 +40,6 @@ function Root() {
   const [stationsError, setStationsError] = useState('');
   const [rewards, setRewards] = useState(null);
   const [rewardsError, setRewardsError] = useState('');
-
-  useEffect(() => {
-    loadSettings().then((loaded) => { configure(loaded); setSettings(loaded); });
-  }, []);
 
   const loadAccount = useCallback(async () => {
     const data = await api.me();
@@ -108,16 +102,12 @@ function Root() {
     return () => sub.remove();
   }, []);
 
-  if (!settings) {
-    return <View style={[s.root, s.center]}><ActivityIndicator color={C.forest} size="large" /></View>;
-  }
-
   const signedIn = Boolean(resident);
   return (
     <KeyboardAvoidingView style={[s.root, { paddingTop: insets.top }]} behavior="padding">
       <StatusBar barStyle="dark-content" backgroundColor={C.paper} />
       <View style={s.topbar}>
-        <View style={s.brandRow}><View style={s.brandMark}><Text style={s.brandSymbol}>↻</Text></View><Text style={s.brand}>ECO-TAP</Text></View>
+        <View style={s.brandRow}><Image source={require('./assets/eco-tap-logo.png')} style={s.brandMark} resizeMode="contain" /><Text style={s.brand}>ECO-TAP</Text></View>
         {signedIn ? (
           <Pressable onPress={() => setTab('profile')} accessibilityRole="button" accessibilityLabel="Profile" style={s.avatar}>
             <Text style={s.avatarText}>{resident.fullName.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase()}</Text>
@@ -129,7 +119,7 @@ function Root() {
         showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
         refreshControl={signedIn ? <RefreshControl refreshing={refreshing} onRefresh={refreshAll} tintColor={C.forest} colors={[C.forest]} /> : undefined}>
         {!signedIn && (
-          <AuthScreen settings={settings} onSettings={setSettings} onAuthenticated={onAuthenticated} notice={authNotice} />
+          <AuthScreen onAuthenticated={onAuthenticated} notice={authNotice} />
         )}
         {signedIn && tab === 'home' && (
           <HomeScreen resident={resident} deposits={deposits} stations={stations} stationsError={stationsError} goTo={setTab} />
@@ -142,7 +132,7 @@ function Root() {
             onRedeemed={(updated) => { setResident(updated); loadAccount().catch(() => {}); }} />
         )}
         {signedIn && tab === 'activity' && <ActivityScreen resident={resident} deposits={deposits} redemptions={redemptions} />}
-        {signedIn && tab === 'profile' && <ProfileScreen resident={resident} settings={settings} onSettings={setSettings} onLogout={logout} />}
+        {signedIn && tab === 'profile' && <ProfileScreen resident={resident} onLogout={logout} />}
       </ScrollView>
 
       {signedIn && deposit.phase === 'waiting' && tab !== 'scan' ? (
@@ -167,11 +157,9 @@ function Root() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.paper },
-  center: { alignItems: 'center', justifyContent: 'center' },
   topbar: { height: 65, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: C.line },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  brandMark: { width: 34, height: 34, borderRadius: 11, backgroundColor: C.forest, alignItems: 'center', justifyContent: 'center' },
-  brandSymbol: { color: C.paper, fontSize: 24, fontWeight: '700', lineHeight: 27 },
+  brandMark: { width: 42, height: 42 },
   brand: { color: C.forest, fontSize: 17, fontWeight: '900', letterSpacing: 1 },
   avatar: { width: 33, height: 33, borderRadius: 17, backgroundColor: C.soft, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: C.forest, fontSize: 11, fontWeight: '900' },

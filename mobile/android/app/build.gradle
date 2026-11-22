@@ -87,9 +87,25 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+
+    def nativeBuildDirectory = findProperty('ecotapNativeBuildDir')
+    if (nativeBuildDirectory) {
+        externalNativeBuild {
+            cmake {
+                buildStagingDirectory file(nativeBuildDirectory)
+            }
+        }
+    }
     namespace 'com.ecotap.resident'
     defaultConfig {
         applicationId 'com.ecotap.resident'
+
+        // Hash long generated object paths so Ninja can build from nested Windows workspaces.
+        externalNativeBuild {
+            cmake {
+                arguments '-DCMAKE_OBJECT_PATH_MAX=240'
+            }
+        }
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

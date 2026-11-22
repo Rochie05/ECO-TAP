@@ -43,7 +43,11 @@ Then open <http://127.0.0.1:3000/>. The API and built site share that origin.
 Points per kilogram live in the `waste_categories` table (seeded: PET 10, HDPE 20). Change the rates there.
 A terminated account keeps its data but cannot sign in (staff) or use its card (resident) until reactivated.
 
-## Android kiosk app
+## React Native kiosk app
+
+The current Expo kiosk lives in [kiosk/](kiosk/README.md). It includes the shared resident-app styling, ECO-TAP branding, NFC sign-in, deposit, account, and rewards flows.
+
+## Original Android kiosk app
 
 `mobile-android/` is the native Android NFC kiosk app (card tap, PIN, rewards, card inquiry). It uses the same server and database as the portal through the `/api/kiosk/*` routes. See `mobile-android/README.md` for setup. It needs `KIOSK_API_KEY` in `.env`. Deposits cannot be logged by hand: the kiosk only opens a deposit session, and the machine's load cell and optical sensor report the weight and material (see *Machine-measured deposits* below).
 

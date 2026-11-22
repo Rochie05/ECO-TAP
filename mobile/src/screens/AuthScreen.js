@@ -5,10 +5,9 @@ import { clearLastCard, loadLastCard, saveLastCard } from '../config';
 import { nfcStatus, openNfcSettings, startCardReader } from '../nfc';
 import { Banner, Button, Card, Field, Heading, s } from '../components';
 import { C } from '../theme';
-import SettingsPanel from './SettingsPanel';
 
 // Steps: card (enter or tap) -> pin (known card) | register (new card).
-export default function AuthScreen({ settings, onSettings, onAuthenticated, notice }) {
+export default function AuthScreen({ onAuthenticated, notice }) {
   const [step, setStep] = useState('card');
   const [card, setCard] = useState('');
   const [name, setName] = useState('');
@@ -17,7 +16,6 @@ export default function AuthScreen({ settings, onSettings, onAuthenticated, noti
   const [pin2, setPin2] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
   const [nfc, setNfc] = useState('checking');
   const stopReader = useRef(null);
   const stepRef = useRef(step);
@@ -136,10 +134,6 @@ export default function AuthScreen({ settings, onSettings, onAuthenticated, noti
         </Card>
       )}
 
-      <Pressable onPress={() => setShowSettings((v) => !v)} style={{ alignSelf: 'center', marginVertical: 14, padding: 6 }}>
-        <Text style={s.textLink}>{showSettings ? 'Hide server settings' : 'Server settings'}</Text>
-      </Pressable>
-      {showSettings && <SettingsPanel settings={settings} onSaved={onSettings} onClose={() => setShowSettings(false)} />}
     </View>
   );
 }

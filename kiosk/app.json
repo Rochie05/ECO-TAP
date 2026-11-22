@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "ECO-TAP Kiosk",
+    "slug": "eco-tap-kiosk",
+    "scheme": "ecotapkiosk",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": { "backgroundColor": "#1E3A38" },
+    "android": {
+      "package": "com.example.ecotap",
+      "versionCode": 1,
+      "adaptiveIcon": { "backgroundColor": "#1E3A38" },
+      "permissions": ["android.permission.INTERNET", "android.permission.NFC", "android.permission.ACCESS_NETWORK_STATE"]
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        { "android": { "usesCleartextTraffic": true } }
+      ],
+      [
+        "react-native-nfc-manager",
+        { "nfcPermission": "Read the resident's ECO-TAP card.", "includeNdefEntitlement": false }
+      ]
+    ]
+  }
+}

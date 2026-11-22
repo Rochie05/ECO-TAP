@@ -9,7 +9,7 @@ The resident-facing Android app. It talks to the same server and database as the
 | Deposit | Pick PET or HDPE, open a session, wait for the machine's weight, see the points awarded | `POST deposit/start`, `GET deposit/:id`, `POST deposit/:id/cancel` |
 | Rewards | Rewards from the portal's rewards desk; redeem with points (shows as *pending* for staff) | `GET rewards`, `POST redeem` |
 | Activity | Deposits and redemptions, newest first | `GET me` |
-| Profile | Account details, change PIN, server settings, sign out | `PUT pin`, `POST logout` |
+| Profile | Account details, change PIN, sign out | `PUT pin`, `POST logout` |
 
 Weights are never typed in. The machine's load cell and optical sensor report them, and the server awards the points (see the main README, *Machine-measured deposits*).
 
@@ -35,7 +35,7 @@ Weights are never typed in. The machine's load cell and optical sensor report th
    - Emulator: `http://10.0.2.2:3000`
    - Phone on the same Wi-Fi: `http://<your-PC-IP>:3000` (allow port 3000 in your firewall)
 
-   You can also change the server address and key inside the app (*Sign in* or *Profile* > Server settings), so a wrong value never needs a rebuild.
+   The app connects automatically using the address and key from the build configuration. Set `EXPO_PUBLIC_API_URL` to the deployed HTTPS endpoint for builds used outside your development network.
 
 3. **Run it** (NFC and secure storage are native code, so use a development build, not plain Expo Go):
 

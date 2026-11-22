@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+dist/
+.env
+android/.sdk/
+android/.kotlin/
+android/build.log

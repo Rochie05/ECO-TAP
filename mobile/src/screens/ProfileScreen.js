@@ -4,14 +4,12 @@ import { api } from '../api';
 import { Banner, Button, Card, Field, Heading, SectionTitle } from '../components';
 import { st } from './HomeScreen';
 import { C } from '../theme';
-import SettingsPanel from './SettingsPanel';
 
-export default function ProfileScreen({ resident, settings, onSettings, onLogout }) {
+export default function ProfileScreen({ resident, onLogout }) {
   const [pin, setPin] = useState('');
   const [pin2, setPin2] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
   const initials = resident.fullName.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   async function changePin() {
@@ -54,8 +52,6 @@ export default function ProfileScreen({ resident, settings, onSettings, onLogout
         </Card>
       ))}
       <View style={{ gap: 10, marginTop: 8 }}>
-        <Button kind="outline" onPress={() => setShowSettings((v) => !v)}>{showSettings ? 'Hide server settings' : 'Server settings'}</Button>
-        {showSettings ? <SettingsPanel settings={settings} onSaved={onSettings} /> : null}
         <Button kind="danger" onPress={onLogout}>Sign out</Button>
       </View>
     </>

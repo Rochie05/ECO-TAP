@@ -5,19 +5,17 @@ export class ApiError extends Error {
   constructor(message, status = 0) { super(message); this.name = 'ApiError'; this.status = status; }
 }
 
-const state = { baseUrl: '', kioskKey: '', token: null, onUnauthorized: null };
+const baseUrl = (process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000').trim().replace(/\/+$/, '');
+const kioskKey = (process.env.EXPO_PUBLIC_KIOSK_KEY || '').trim();
+const state = { token: null, onUnauthorized: null };
 
-export function configure({ baseUrl, kioskKey }) {
-  state.baseUrl = String(baseUrl || '').replace(/\/+$/, '');
-  state.kioskKey = kioskKey || '';
-}
 export function setToken(token) { state.token = token; }
 export function hasToken() { return Boolean(state.token); }
 export function setUnauthorizedHandler(fn) { state.onUnauthorized = fn; }
 
 async function request(method, path, body, { timeoutMs = 15000, session = true } = {}) {
-  if (!state.baseUrl) throw new ApiError('Set the ECO-TAP server address in Server settings.');
-  const headers = { Accept: 'application/json', 'X-Kiosk-Key': state.kioskKey };
+  if (!baseUrl) throw new ApiError('The ECO-TAP server address is missing from this app build.');
+  const headers = { Accept: 'application/json', 'X-Kiosk-Key': kioskKey };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (session && state.token) headers.Authorization = `Bearer ${state.token}`;
 
@@ -25,13 +23,13 @@ async function request(method, path, body, { timeoutMs = 15000, session = true }
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   let res;
   try {
-    res = await fetch(`${state.baseUrl}${path}`, {
+    res = await fetch(`${baseUrl}${path}`, {
       method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal,
     });
   } catch (error) {
     throw new ApiError(error?.name === 'AbortError'
       ? 'The server took too long to answer. Please try again.'
-      : 'Cannot reach the ECO-TAP server. Check your connection and the server address.');
+      : 'Cannot reach the ECO-TAP server. Check your internet connection and try again.');
   } finally {
     clearTimeout(timer);
   }
