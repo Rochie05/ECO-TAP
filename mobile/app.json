@@ -8,6 +8,7 @@
       "android"
     ],
     "orientation": "portrait",
+    "icon": "./assets/eco-tap-logo.png",
     "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#F4F5EB"
