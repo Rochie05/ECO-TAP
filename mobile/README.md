@@ -6,9 +6,9 @@ The resident-facing Android app. It talks to the same server and database as the
 |---|---|---|
 | Sign in | Card ID (typed or tapped via NFC) + 6-digit PIN. New cards register with a zero point balance. | `POST card`, `register`, `login` |
 | Home | Real points, total kg, recent deposits, kiosk status | `GET me`, `stations` |
-| Deposit | Pick PET or HDPE, open a session, wait for the machine's weight, see the points awarded | `POST deposit/start`, `GET deposit/:id`, `POST deposit/:id/cancel` |
 | Rewards | Rewards from the portal's rewards desk; redeem with points (shows as *pending* for staff) | `GET rewards`, `POST redeem` |
-| Activity | Deposits and redemptions, newest first | `GET me` |
+| Activity | Deposit and redemption history with receipts | `GET me` |
+| Notifications | Kiosk sign-ins, sign-outs, and completed deposits | `GET notifications` |
 | Profile | Account details, change PIN, sign out | `PUT pin`, `POST logout` |
 
 Weights are never typed in. The machine's load cell and optical sensor report them, and the server awards the points (see the main README, *Machine-measured deposits*).
@@ -54,14 +54,14 @@ Weights are never typed in. The machine's load cell and optical sensor report th
 
 ## Try a deposit end to end
 
-1. Sign in on the phone, open **Deposit**, choose PET, tap **Start deposit**.
+1. Sign in on the kiosk, open **Deposit**, choose PET, and tap **Start deposit**.
 2. Within 3 minutes, act as the machine:
 
    ```sh
    node scripts/simulate-machine.mjs --station K-001 --key <device key> --material PET --kg 1.25
    ```
 
-3. The app shows the points awarded and the balance updates.
+3. Open **Activity** or the notification bell in the resident app to see the material, weight, and points awarded.
 
 ## Notes
 

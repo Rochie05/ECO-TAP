@@ -22,7 +22,7 @@ test('sends the kiosk key, and the bearer token once logged in', async () => {
   assert.equal(calls[0].url, 'http://10.0.2.2:3000/api/kiosk/login');
   assert.equal(calls[0].init.headers['X-Kiosk-Key'], 'change-me');
   assert.equal(calls[0].init.headers.Authorization, undefined);
-  assert.deepEqual(JSON.parse(calls[0].init.body), { nfcCardId: 'ECO-TAP-8A19B', pin: '123456' });
+  assert.deepEqual(JSON.parse(calls[0].init.body), { nfcCardId: 'ECO-TAP-8A19B', pin: '123456', source: 'kiosk' });
   await api.getAccount();
   assert.equal(calls[1].init.headers.Authorization, 'Bearer tok123');
   await api.logout();

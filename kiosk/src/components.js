@@ -4,6 +4,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { alpha, C } from './theme';
 import { AppMode } from './controller';
 import { KIOSK_LOCATION } from './config';
+import { NotificationsButton } from './Notifications';
 
 export function ServiceLayout({ wide, summary, actions, children }) {
   return (
@@ -93,7 +94,7 @@ export function HeaderCard({ eyebrow, title, subtitle, right }) {
 }
 
 /** KioskHeader: brand bar with Exit / Back. `topInset` is the status-bar height (Compose statusBarsPadding). */
-export function KioskHeader({ currentMode, user, onLogout, topInset = 0, compact = false }) {
+export function KioskHeader({ currentMode, user, onLogout, topInset = 0, compact = false, onNotifications, unreadNotifications }) {
   const showExit = user != null && currentMode !== AppMode.NFC_SCAN && currentMode !== AppMode.PIN_ENTRY;
   const showBack = !showExit && currentMode !== AppMode.NFC_SCAN;
   return (
@@ -106,16 +107,19 @@ export function KioskHeader({ currentMode, user, onLogout, topInset = 0, compact
           <Text style={s.brandSub}>{KIOSK_LOCATION}</Text>
         </View>
       </View>
-      {showExit ? (
-        <Pressable accessibilityRole="button" onPress={() => onLogout()} style={[s.exit, { backgroundColor: C.iceMint }]}>
-          <Text style={{ color: C.darkPine, fontSize: 12, fontWeight: '900' }}>← Exit</Text>
-        </Pressable>
-      ) : null}
-      {showBack ? (
-        <Pressable accessibilityRole="button" onPress={() => onLogout()} style={[s.exit, { borderWidth: 1, borderColor: C.warmGray }]}>
-          <Text style={{ color: C.darkPine, fontSize: 11, fontWeight: '700' }}>← Back</Text>
-        </Pressable>
-      ) : null}
+      <View style={s.headerActions}>
+        {onNotifications ? <NotificationsButton onPress={onNotifications} unread={unreadNotifications} /> : null}
+        {showExit ? (
+          <Pressable accessibilityRole="button" onPress={() => onLogout()} style={[s.exit, { backgroundColor: C.iceMint }]}>
+            <Text style={{ color: C.darkPine, fontSize: 12, fontWeight: '900' }}>← Exit</Text>
+          </Pressable>
+        ) : null}
+        {showBack ? (
+          <Pressable accessibilityRole="button" onPress={() => onLogout()} style={[s.exit, { borderWidth: 1, borderColor: C.warmGray }]}>
+            <Text style={{ color: C.darkPine, fontSize: 11, fontWeight: '700' }}>← Back</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -169,6 +173,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   compactHeader: { paddingBottom: 5 },
   logo: { width: 52, height: 52 },
   compactLogo: { width: 36, height: 36 },

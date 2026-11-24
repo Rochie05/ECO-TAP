@@ -4,12 +4,14 @@ import { api, newIdempotencyKey } from '../api';
 import { Banner, Button, Card, Heading, Loading, SectionTitle } from '../components';
 import { st } from './HomeScreen';
 import { C } from '../theme';
+import TransactionReceipt from '../TransactionReceipt';
 
 const ICONS = ['✿', '▧', '◇', '❖', '✦'];
 
 export default function RewardsScreen({ resident, rewards, rewardsError, onRedeemed, reload }) {
   const [busyId, setBusyId] = useState(null);
   const [message, setMessage] = useState(null);
+  const [receipt, setReceipt] = useState(null);
   // One key per reward until it succeeds, so a retry after a dropped connection can't spend points twice.
   const keys = useRef({});
 
@@ -23,6 +25,7 @@ export default function RewardsScreen({ resident, rewards, rewardsError, onRedee
           const result = await api.redeem(reward.id, keys.current[reward.id]);
           delete keys.current[reward.id];
           onRedeemed(result.resident);
+          setReceipt(result);
           setMessage({ kind: 'info', text: `${reward.title} redeemed. Collect it from the Waste Management Department.` });
         } catch (error) {
           if (error.status && error.status < 500) delete keys.current[reward.id];
@@ -60,6 +63,8 @@ export default function RewardsScreen({ resident, rewards, rewardsError, onRedee
         </Card>
       ))}
       <Text style={rw.foot}>Redeemed rewards show as pending until staff hand the item over.</Text>
+      {receipt?.redemption ? <TransactionReceipt transaction={receipt.redemption} kind="reward"
+        balance={receipt.resident.ecoPoints} onClose={() => setReceipt(null)} /> : null}
     </>
   );
 }

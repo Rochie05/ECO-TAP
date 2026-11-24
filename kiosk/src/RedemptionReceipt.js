@@ -37,6 +37,23 @@ export default function RedemptionReceipt({ redemption, balance, onClose }) {
   );
 }
 
+export function DepositReceipt({ deposit, onClose }) {
+  return (
+    <RedemptionDialog title="Deposit receipt" onClose={onClose}>
+      {deposit.location ? <Text style={s.muted}>{deposit.location}</Text> : null}
+      <Text style={s.reward}>{deposit.categoryName}</Text>
+      <View style={s.details}>
+        <Text style={s.detail}>Transaction ID · DEP-{deposit.id}</Text>
+        {deposit.batchId ? <Text style={s.detail}>Collection batch · {deposit.batchId}</Text> : null}
+        <Text style={s.detail}>{formatDate(deposit.timestamp)}</Text>
+        <Text style={s.detail}>Weight · {deposit.weightKg} kg</Text>
+        <Text style={s.detail}>Points earned · +{deposit.pointsEarned}</Text>
+      </View>
+      <Button title="Done" onPress={onClose} height={44} />
+    </RedemptionDialog>
+  );
+}
+
 const s = StyleSheet.create({
   backdrop: { flexGrow: 1, justifyContent: 'center', padding: 14, backgroundColor: '#10251ECC' },
   dialog: { width: '100%', maxWidth: 480, alignSelf: 'center' },

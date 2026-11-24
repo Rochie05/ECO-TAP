@@ -53,7 +53,7 @@ The current Expo kiosk lives in [kiosk/](kiosk/README.md). It includes the share
 
 ## Resident mobile app (React Native / Expo)
 
-The `mobile/` folder is a working Android app for residents. It signs in with the NFC card + 6-digit PIN, shows real points and history, starts machine-measured deposits, and redeems rewards, all through the `/api/kiosk/*` routes. See `mobile/README.md` for setup, building an APK, and testing a deposit with the machine simulator.
+The `mobile/` folder is the Android app for residents. It signs in with the NFC card and six-digit PIN, shows balances, receipts, and kiosk notifications, and redeems rewards through the `/api/kiosk/*` routes. Residents start deposits at the kiosk. See `mobile/README.md` for setup, APK builds, and a machine-simulator walkthrough.
 
 ## Accounts
 

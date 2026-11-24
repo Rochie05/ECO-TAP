@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Heading, Loading, SectionTitle, StationCard } from '../components';
 import { C } from '../theme';
 
@@ -25,15 +25,14 @@ export default function HomeScreen({ resident, deposits, stations, stationsError
         <View style={st.actionArt}><Text style={st.actionArtText}>♻</Text></View>
         <View style={{ flex: 1 }}>
           <Text style={st.cardTitle}>Recycle & earn</Text>
-          <Text style={st.cardCopy}>Choose PET or HDPE, then drop your bottles into the machine.</Text>
+          <Text style={st.cardCopy}>Tap your Eco-Card at a kiosk to deposit PET or HDPE bottles.</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Start a deposit" onPress={() => goTo('scan')} style={st.arrowButton}><Text style={st.arrowText}>→</Text></Pressable>
       </Card>
-      <SectionTitle eyebrow="COLLECTION NETWORK" title="Nearby kiosks" action="See all" onAction={() => goTo('scan')} />
+      <SectionTitle eyebrow="COLLECTION NETWORK" title="Nearby kiosks" />
       {stations === null && !stationsError ? <Loading /> : null}
       {stationsError ? <Text style={st.cardCopy}>{stationsError}</Text> : null}
       {stations && stations.length === 0 ? <Text style={st.cardCopy}>No kiosks are set up yet.</Text> : null}
-      {stations && stations[0] ? <StationCard station={stations[0]} /> : null}
+      {stations?.map((station) => <StationCard key={station.id} station={station} />)}
     </>
   );
 }
@@ -56,6 +55,4 @@ export const st = StyleSheet.create({
   actionArtText: { color: C.forest, fontSize: 29 },
   cardTitle: { color: C.forest, fontSize: 14, fontWeight: '800', lineHeight: 19 },
   cardCopy: { color: C.muted, fontSize: 11, lineHeight: 16, marginTop: 4 },
-  arrowButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.forest, alignItems: 'center', justifyContent: 'center' },
-  arrowText: { color: C.paper, fontSize: 19 },
 });

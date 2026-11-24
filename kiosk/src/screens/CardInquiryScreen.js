@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BackHandler, FlatList, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { alpha, C } from '../theme';
 import { KIOSK_LOCATION } from '../config';
-import RedemptionReceipt from '../RedemptionReceipt';
+import RedemptionReceipt, { DepositReceipt } from '../RedemptionReceipt';
 import { Button, Card, OutlinedButton, ServiceLayout } from '../components';
 import { formatDate, formatKg } from '../format';
 
@@ -41,10 +41,7 @@ export default function CardInquiryScreen({ wide, user, deposits, redemptions, o
   const summary = (
     <Card radius={22} color={CARD_GREEN} elevation={6} style={{ padding: 20 }}>
       <View style={s.between}>
-        <View style={s.row}>
-          <Text style={{ fontSize: 20 }}>🌱 </Text>
-          <Text style={s.cardBrand}>QUEZON CITY ECO-CARD</Text>
-        </View>
+        <Text style={s.cardBrand}>QUEZON CITY ECO-CARD</Text>
         {!wide && changePin}
       </View>
 
@@ -106,10 +103,11 @@ export default function CardInquiryScreen({ wide, user, deposits, redemptions, o
           persistentScrollbar
           contentContainerStyle={{ gap: 8 }}
           renderItem={({ item: row }) => (row.kind === 'deposit'
-            ? <DepositRow d={row.item} />
-            : <RedemptionRow r={row.item} onViewReceipt={() => setReceipt(row.item)} />)}
+            ? <DepositRow d={row.item} onViewReceipt={() => setReceipt(row)} />
+            : <RedemptionRow r={row.item} onViewReceipt={() => setReceipt(row)} />)}
         />
-        {receipt ? <RedemptionReceipt redemption={receipt} onClose={() => setReceipt(null)} /> : null}
+        {receipt?.kind === 'deposit' ? <DepositReceipt deposit={receipt.item} onClose={() => setReceipt(null)} /> : null}
+        {receipt?.kind === 'redeem' ? <RedemptionReceipt redemption={receipt.item} onClose={() => setReceipt(null)} /> : null}
       </ServiceLayout>
     );
   }
@@ -127,15 +125,14 @@ export default function CardInquiryScreen({ wide, user, deposits, redemptions, o
   );
 }
 
-function DepositRow({ d }) {
+function DepositRow({ d, onViewReceipt }) {
   return (
-    <Card radius={12} style={s.rowCard}>
-      <View style={s.row}>
-        <View style={[s.circle, { backgroundColor: C.iceMint }]}><Text style={{ fontSize: 18 }}>♻️</Text></View>
-        <View style={{ marginLeft: 12 }}>
-          <Text style={s.rowTitle}>{d.categoryName}</Text>
-          <Text style={s.rowSub}>{formatKg(d.weightKg)} kg | {formatDate(d.timestamp)}</Text>
-        </View>
+    <Card radius={12} style={s.rowCard} onPress={onViewReceipt}>
+      <View style={s.rowCopy}>
+        <Text style={s.rowTitle}>{d.categoryName}</Text>
+        <Text style={s.rowSub}>{formatKg(d.weightKg)} kg · {formatDate(d.timestamp)}</Text>
+        {d.location ? <Text style={s.rowSub}>{d.location}</Text> : null}
+        <Text style={s.receiptLink}>View receipt</Text>
       </View>
       <Text style={[s.points, { color: C.darkPine }]}>+{d.pointsEarned} PTS</Text>
     </Card>
@@ -145,13 +142,10 @@ function DepositRow({ d }) {
 function RedemptionRow({ r, onViewReceipt }) {
   return (
     <Card radius={12} style={s.rowCard} onPress={onViewReceipt}>
-      <View style={s.row}>
-        <View style={[s.circle, { backgroundColor: C.amberSoft }]}><Text style={{ fontSize: 18 }}>🛍️</Text></View>
-        <View style={{ marginLeft: 12 }}>
-          <Text style={s.rowTitle}>{r.itemTitle}</Text>
-          <Text style={s.rowSub}>Redeemed | {formatDate(r.timestamp)}</Text>
-          <Text style={s.receiptLink}>View receipt</Text>
-        </View>
+      <View style={s.rowCopy}>
+        <Text style={s.rowTitle}>{r.itemTitle}</Text>
+        <Text style={s.rowSub}>Redeemed | {formatDate(r.timestamp)}</Text>
+        <Text style={s.receiptLink}>View receipt</Text>
       </View>
       <Text style={[s.points, { color: C.error }]}>-{r.pointsDeducted} PTS</Text>
     </Card>
@@ -178,7 +172,7 @@ const s = StyleSheet.create({
   historyTitle: { fontSize: 20, fontWeight: '900', color: C.darkPine },
   empty: { fontSize: 13, color: C.textMuted, marginTop: 12 },
   rowCard: { padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  circle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  rowCopy: { flex: 1, marginRight: 12 },
   rowTitle: { fontWeight: '700', fontSize: 14, color: C.deepNavy },
   rowSub: { fontSize: 11, color: C.textMuted },
   receiptLink: { fontSize: 11, color: C.darkPine, fontWeight: '700' },

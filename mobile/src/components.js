@@ -102,6 +102,14 @@ export function formatDate(ms) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+export function formatTimestamp(ms) {
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
 export const s = StyleSheet.create({
   eyebrow: { color: C.leaf, fontSize: 11, fontWeight: '900', letterSpacing: 1.5, marginBottom: 9 },
   pageTitle: { color: C.forest, fontSize: 38, lineHeight: 43, letterSpacing: -1.8, fontWeight: '900', maxWidth: 360 },

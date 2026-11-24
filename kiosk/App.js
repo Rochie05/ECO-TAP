@@ -1,11 +1,13 @@
 // Port of MainActivity.kt: NFC reader lifecycle, header + banner, and the screen switch on the current mode.
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, BackHandler, StatusBar, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppMode } from './src/controller';
 import { useKiosk } from './src/useKiosk';
 import { disableReaderMode, enableReaderMode } from './src/nfc';
 import { BannerNotification, KioskHeader } from './src/components';
+import { api } from './src/api';
+import { NotificationsDialog } from './src/Notifications';
 import { C } from './src/theme';
 import NfcScanScreen from './src/screens/NfcScanScreen';
 import RegisterResidentScreen from './src/screens/RegisterResidentScreen';
@@ -35,6 +37,43 @@ function Kiosk() {
   const compact = width > height && width >= 560;
   const [state, kiosk] = useKiosk();
   const { currentMode: mode, authenticatedUser: user } = state;
+  const signedIn = Boolean(user && mode !== AppMode.PIN_ENTRY && mode !== AppMode.NFC_SCAN && mode !== AppMode.REGISTRATION);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+  const [seenNotification, setSeenNotification] = useState(null);
+  const notificationSession = useRef(0);
+  const loadNotifications = useCallback(async () => {
+    const current = notificationSession.current;
+    try {
+      const items = await api.getNotifications();
+      if (current !== notificationSession.current) return;
+      setNotifications(items);
+      setNotificationsError('');
+    } catch (error) {
+      if (current === notificationSession.current) setNotificationsError(error.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    notificationSession.current += 1;
+    if (!signedIn) {
+      setNotifications([]);
+      setNotificationsOpen(false);
+      setNotificationsError('');
+      setSeenNotification(null);
+      return;
+    }
+    loadNotifications();
+    const poll = setInterval(() => {
+      if (AppState.currentState === 'active') loadNotifications();
+    }, 30000);
+    return () => clearInterval(poll);
+  }, [signedIn, user?.id, loadNotifications]);
+
+  useEffect(() => {
+    if (notificationsOpen && notifications.length) setSeenNotification(notifications[0].id);
+  }, [notificationsOpen, notifications]);
 
   // NFC: read cards while the app is in the foreground (Kotlin onResume / onPause).
   const onCard = useCallback((id) => kiosk.onNfcCardTapped(id), [kiosk]);
@@ -121,11 +160,17 @@ function Kiosk() {
   return (
     <View style={[s.root, { paddingLeft: insets.left, paddingRight: insets.right }]}>
       <StatusBar barStyle="dark-content" backgroundColor={C.surfaceBg} translucent hidden={compact} />
-      <KioskHeader currentMode={mode} user={user} onLogout={() => kiosk.logoutSession()} topInset={insets.top} compact={compact} />
+      <KioskHeader currentMode={mode} user={user} onLogout={() => kiosk.logoutSession()} topInset={insets.top} compact={compact}
+        onNotifications={signedIn ? () => { setNotificationsOpen(true); loadNotifications(); } : undefined}
+        unreadNotifications={Boolean(notifications[0] && notifications[0].id !== seenNotification)} />
       <View style={[s.body, { paddingBottom: insets.bottom }]}>
         {screen}
         <BannerNotification message={state.banner} onDismiss={kiosk.clearBanner} />
       </View>
+      {signedIn && notificationsOpen ? (
+        <NotificationsDialog items={notifications} error={notificationsError} onRefresh={loadNotifications}
+          onClose={() => setNotificationsOpen(false)} />
+      ) : null}
     </View>
   );
 }

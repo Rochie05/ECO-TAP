@@ -78,16 +78,18 @@ export const api = {
   register: (nfcCardId, fullName, address, pin) =>
     call('POST', '/api/kiosk/register', { nfcCardId: normalizeCardId(nfcCardId), fullName, address, pin }).then((d) => d.resident),
   login: (nfcCardId, pin) =>
-    call('POST', '/api/kiosk/login', { nfcCardId: normalizeCardId(nfcCardId), pin }).then((d) => {
+    call('POST', '/api/kiosk/login', { nfcCardId: normalizeCardId(nfcCardId), pin, source: 'kiosk' }).then((d) => {
       session.token = d.token;
       return d.resident;
     }),
   logout: async () => {
+    const token = session.token;
     try { await call('POST', '/api/kiosk/logout', {}); } catch { /* the token is dropped locally either way */ }
-    session.token = null;
+    if (session.token === token) session.token = null;
   },
   clearSession: () => { session.token = null; },
   getAccount: () => call('GET', '/api/kiosk/me'),
+  getNotifications: () => call('GET', '/api/kiosk/notifications').then((d) => d.notifications),
   changePin: (newPin) => {
     if (!/^\d{6}$/.test(newPin)) return Promise.reject(new ApiError('PIN must be 6 digits.'));
     return call('PUT', '/api/kiosk/pin', { pin: newPin }).then(() => true);

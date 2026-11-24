@@ -130,11 +130,11 @@ export default function DepositScreen({ wide, user, categories, busy, onStart, o
 
         {step === 'DONE' ? (
           <Card radius={16} color={C.iceMint} border={{ color: C.warmGray }} style={[s.centerCard, { padding: 20 }]}>
-            <Text style={{ fontSize: 36 }}>♻️</Text>
             <Text style={s.earned}>+{recorded?.pointsEarned ?? 0} Eco-Points</Text>
             <Text style={s.insertSub}>
-              {Number(recorded?.weightKg ?? 0).toFixed(2)} kg of {recorded?.categoryName ?? ''} (weighed by the machine)
+              {recorded?.categoryName} · {Number(recorded?.weightKg ?? 0).toFixed(2)} kg
             </Text>
+            {recorded?.location ? <Text style={s.insertSub}>{recorded.location}</Text> : null}
             <Text style={s.balance}>New balance: {user.ecoPoints} pts</Text>
           </Card>
         ) : null}

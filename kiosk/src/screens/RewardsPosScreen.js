@@ -5,8 +5,6 @@ import { Button, Card, Hero, OutlinedButton, ServiceLayout } from '../components
 import { newIdempotencyKey } from '../api';
 import RedemptionReceipt, { RedemptionDialog } from '../RedemptionReceipt';
 
-const ICONS = { rice: '🌾', food: '🥫', oil: '🍾', hygiene: '🧴', bag: '🛍️', gift: '🎁' };
-
 export default function RewardsPosScreen({ wide, user, rewardItems, onRedeemItem, onBackToMenu }) {
   const [request, setRequest] = useState(null);
   const [receipt, setReceipt] = useState(null);
@@ -67,8 +65,7 @@ export default function RewardsPosScreen({ wide, user, rewardItems, onRedeemItem
           const canAfford = user.ecoPoints >= item.pointsCost;
           return (
             <Card radius={16} border={{ color: C.warmGray }} style={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}>
-              <View style={s.icon}><Text style={{ fontSize: 24 }}>{ICONS[item.iconName] ?? '🎟️'}</Text></View>
-              <View style={{ flex: 1, marginLeft: 14 }}>
+              <View style={{ flex: 1 }}>
                 <Text style={s.itemTitle}>{item.title}</Text>
                 {item.description ? <Text style={s.itemDesc}>{item.description}</Text> : null}
                 {item.category ? (
@@ -125,7 +122,6 @@ const s = StyleSheet.create({
   listTitle: { fontSize: 19, fontWeight: '900', color: C.darkPine, marginTop: 16, marginBottom: 10 },
   wideListTitle: { marginTop: 0, marginBottom: 0 },
   confirmText: { fontSize: 15, color: C.darkPine },
-  icon: { width: 48, height: 48, borderRadius: 15, backgroundColor: C.iceMint, alignItems: 'center', justifyContent: 'center' },
   itemTitle: { fontSize: 15, fontWeight: '700', color: C.darkPine },
   itemDesc: { fontSize: 11, color: C.textMuted },
   chip: { alignSelf: 'flex-start', backgroundColor: C.iceMint, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 },

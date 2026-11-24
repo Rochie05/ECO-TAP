@@ -7,10 +7,10 @@ import { Card, Hero } from '../components';
 import { formatKg } from '../format';
 
 const OPTIONS = [
-  { title: 'Deposit recyclables', description: 'Choose a material and earn Eco-Points.', icon: '♻', mode: AppMode.DEPOSIT },
-  { title: 'Redeem rewards', description: 'Use your points for available rewards.', icon: '★', mode: AppMode.REWARDS_POS },
-  { title: 'Point conversion', description: 'See how many points each material earns.', icon: '≈', mode: AppMode.POINT_CONVERSION },
-  { title: 'Card & account', description: 'View activity or change your PIN.', icon: '▤', mode: AppMode.CARD_INQUIRY },
+  { title: 'Deposit recyclables', description: 'Choose a material and earn Eco-Points.', mode: AppMode.DEPOSIT },
+  { title: 'Redeem rewards', description: 'Use your points for available rewards.', mode: AppMode.REWARDS_POS },
+  { title: 'Point conversion', description: 'See how many points each material earns.', mode: AppMode.POINT_CONVERSION },
+  { title: 'Card & account', description: 'View activity or change your PIN.', mode: AppMode.CARD_INQUIRY },
 ];
 
 export default function KioskMenuScreen({ wide, user, onNavigate }) {
@@ -32,7 +32,6 @@ export default function KioskMenuScreen({ wide, user, onNavigate }) {
         <View style={[s.options, wide && s.wideOptions]}>
           {OPTIONS.map((option) => (
             <Card key={option.mode} onPress={() => onNavigate(option.mode)} style={[s.option, wide && s.wideOption]}>
-              <View style={[s.iconTile, wide && s.wideIconTile]}><Text style={s.icon}>{option.icon}</Text></View>
               <View style={s.optionText}>
                 <Text style={s.optionTitle}>{option.title}</Text>
                 <Text style={s.copy}>{option.description}</Text>
@@ -65,9 +64,6 @@ const s = StyleSheet.create({
   wideOptions: { gap: 6 },
   option: { flexDirection: 'row', alignItems: 'center', padding: 13, gap: 12 },
   wideOption: { padding: 7, gap: 9 },
-  iconTile: { width: 48, height: 48, borderRadius: 15, backgroundColor: C.iceMint, alignItems: 'center', justifyContent: 'center' },
-  wideIconTile: { width: 34, height: 34, borderRadius: 10 },
-  icon: { fontSize: 23, color: C.darkPine },
   optionText: { flex: 1 },
   optionTitle: { fontSize: 16, fontWeight: '800', color: C.darkPine },
   arrow: { width: 7, height: 7, marginRight: 4, borderTopWidth: 2, borderRightWidth: 2, borderColor: C.darkPine, transform: [{ rotate: '45deg' }] },

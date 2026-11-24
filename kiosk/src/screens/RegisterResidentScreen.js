@@ -43,8 +43,7 @@ export default function RegisterResidentScreen({ wide, scannedNfcCardId, onCreat
         </Card>
 
         <Card radius={16} elevation={2} style={{ padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-          <View style={s.cardIcon}><Text style={{ fontSize: 24 }}>💳</Text></View>
-          <View style={{ marginLeft: 14, flex: 1 }}>
+          <View style={{ flex: 1 }}>
             <Text style={s.uidLabel}>DETECTED NFC CARD UID</Text>
             <Text style={s.uid}>{scannedNfcCardId}</Text>
           </View>
@@ -88,7 +87,6 @@ const s = StyleSheet.create({
   tagText: { fontSize: 10, fontWeight: '900', color: C.black },
   title: { fontSize: 22, fontWeight: '900', color: C.white, marginTop: 8 },
   sub: { fontSize: 12, color: alpha(C.white, 0.85), textAlign: 'center', marginTop: 2 },
-  cardIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.goldAmber, alignItems: 'center', justifyContent: 'center' },
   uidLabel: { fontSize: 10, fontWeight: '700', color: C.textMuted },
   uid: { fontSize: 16, fontWeight: '900', fontFamily: 'monospace', color: C.darkPine },
   formTitle: { fontSize: 12, fontWeight: '900', color: C.darkPine, letterSpacing: 0.8 },

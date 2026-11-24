@@ -17,8 +17,7 @@ export default function PinEntryScreen({ wide, user, pinInput, errorMessage, onD
     <ScrollView style={s.screen} contentContainerStyle={[s.content, wide && s.wideContent]}>
       <View style={[s.column, wide && s.wideColumn]}>
         <Card radius={20} color={C.darkPine} elevation={2} style={s.greeting}>
-          <View style={s.avatar}><Text style={{ fontSize: 26 }}>🪪</Text></View>
-          <View style={{ marginLeft: 16, flex: 1 }}>
+          <View style={{ flex: 1 }}>
             <Text style={s.verified}>NFC CARD VERIFIED</Text>
             <Text style={s.name}>{user.fullName}</Text>
             <Text style={s.uid}>{KIOSK_LOCATION}</Text>
@@ -79,7 +78,6 @@ const s = StyleSheet.create({
   pad: { alignSelf: 'stretch', gap: 10 },
   widePad: { gap: 5 },
   greeting: { alignSelf: 'stretch', padding: 18, flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: C.goldAmber, alignItems: 'center', justifyContent: 'center' },
   verified: { fontSize: 10, fontWeight: '700', color: C.goldAmber, letterSpacing: 1 },
   name: { fontSize: 20, fontWeight: '900', color: C.white },
   uid: { fontSize: 11, color: alpha(C.white, 0.8) },

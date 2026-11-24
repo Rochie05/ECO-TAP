@@ -29,6 +29,16 @@ ALTER TABLE residents ADD COLUMN IF NOT EXISTS pin_salt text;
 ALTER TABLE residents ADD COLUMN IF NOT EXISTS pin_hash text;
 ALTER TABLE residents ADD COLUMN IF NOT EXISTS address text NOT NULL DEFAULT '';
 ALTER TABLE residents ADD COLUMN IF NOT EXISTS registered_at text;
+CREATE TABLE IF NOT EXISTS kiosk_session_events (
+  id text PRIMARY KEY,
+  resident_id text NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+  kind text NOT NULL CHECK (kind IN ('login', 'logout')),
+  location text NOT NULL,
+  occurred_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS kiosk_session_events_resident_time_idx
+  ON kiosk_session_events (resident_id, occurred_at DESC);
+ALTER TABLE kiosk_session_events ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS logs (
   id integer PRIMARY KEY, kiosk text NOT NULL, section text NOT NULL, resident text NOT NULL,
   material text NOT NULL, subtype text NOT NULL, weight double precision NOT NULL, points integer NOT NULL,
@@ -100,6 +110,33 @@ CREATE TABLE IF NOT EXISTS waste_transfers (
   weight double precision NOT NULL CHECK (weight > 0), status text NOT NULL,
   dispatched_at text NOT NULL, received_at text, staff text NOT NULL, idempotency_key text UNIQUE
 );
+CREATE TABLE IF NOT EXISTS material_batches (
+  id text PRIMARY KEY,
+  station text NOT NULL,
+  section text NOT NULL,
+  origin text NOT NULL,
+  material text NOT NULL,
+  weight double precision NOT NULL CHECK (weight > 0),
+  collected_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE logs ADD COLUMN IF NOT EXISTS bin_tracked boolean NOT NULL DEFAULT false;
+ALTER TABLE logs ADD COLUMN IF NOT EXISTS batch_id text REFERENCES material_batches(id);
+ALTER TABLE waste_transfers ADD COLUMN IF NOT EXISTS batch_id text REFERENCES material_batches(id);
+CREATE UNIQUE INDEX IF NOT EXISTS waste_transfers_batch_idx ON waste_transfers (batch_id);
+CREATE INDEX IF NOT EXISTS logs_open_bin_idx ON logs (kiosk, section) WHERE bin_tracked AND batch_id IS NULL;
+CREATE INDEX IF NOT EXISTS logs_resident_batch_idx ON logs (resident, batch_id) WHERE batch_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS material_batch_events (
+  batch_id text NOT NULL REFERENCES material_batches(id),
+  kind text NOT NULL CHECK (kind IN ('dispatched', 'checkpoint', 'arrived', 'converted')),
+  location text NOT NULL,
+  product text,
+  quantity integer CHECK (quantity > 0),
+  occurred_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (batch_id, kind, location)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS material_batch_one_conversion_idx ON material_batch_events (batch_id) WHERE kind='converted';
+ALTER TABLE material_batches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE material_batch_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE waste_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE beneficiaries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE waste_transfers ENABLE ROW LEVEL SECURITY;

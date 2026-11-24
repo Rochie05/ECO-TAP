@@ -16,8 +16,9 @@ export function setUnauthorizedHandler(fn) { state.onUnauthorized = fn; }
 async function request(method, path, body, { timeoutMs = 15000, session = true } = {}) {
   if (!baseUrl) throw new ApiError('The ECO-TAP server address is missing from this app build.');
   const headers = { Accept: 'application/json', 'X-Kiosk-Key': kioskKey };
+  const requestToken = session ? state.token : null;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  if (session && state.token) headers.Authorization = `Bearer ${state.token}`;
+  if (requestToken) headers.Authorization = `Bearer ${requestToken}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -39,7 +40,7 @@ async function request(method, path, body, { timeoutMs = 15000, session = true }
   if (!res.ok) {
     const message = data?.error || `Request failed (${res.status}).`;
     // A 401 on a signed-in call means the 15-minute resident session ended.
-    if (res.status === 401 && session && state.token) state.onUnauthorized?.(message);
+    if (res.status === 401 && requestToken && state.token === requestToken) state.onUnauthorized?.(message);
     throw new ApiError(message, res.status);
   }
   return data;
@@ -48,18 +49,15 @@ async function request(method, path, body, { timeoutMs = 15000, session = true }
 export const api = {
   health: () => request('GET', '/api/kiosk/health', undefined, { session: false, timeoutMs: 8000 }),
   rewards: () => request('GET', '/api/kiosk/rewards', undefined, { session: false }).then((d) => d.rewards),
-  categories: () => request('GET', '/api/kiosk/categories', undefined, { session: false }).then((d) => d.categories),
   stations: () => request('GET', '/api/kiosk/stations', undefined, { session: false }).then((d) => d.stations),
   lookupCard: (nfcCardId) => request('POST', '/api/kiosk/card', { nfcCardId }, { session: false }),
   register: (body) => request('POST', '/api/kiosk/register', body, { session: false }),
   login: (nfcCardId, pin) => request('POST', '/api/kiosk/login', { nfcCardId, pin }, { session: false }),
   logout: () => request('POST', '/api/kiosk/logout', {}),
   me: () => request('GET', '/api/kiosk/me'),
+  notifications: () => request('GET', '/api/kiosk/notifications').then((data) => data.notifications),
   changePin: (pin) => request('PUT', '/api/kiosk/pin', { pin }),
   redeem: (itemId, idempotencyKey) => request('POST', '/api/kiosk/redeem', { itemId, idempotencyKey }),
-  startDeposit: (categoryId) => request('POST', '/api/kiosk/deposit/start', { categoryId }),
-  depositStatus: (sessionId) => request('GET', `/api/kiosk/deposit/${encodeURIComponent(sessionId)}`),
-  cancelDeposit: (sessionId) => request('POST', `/api/kiosk/deposit/${encodeURIComponent(sessionId)}/cancel`, {}),
 };
 
 export function normalizeCardId(value) {

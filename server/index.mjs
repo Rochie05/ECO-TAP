@@ -136,7 +136,7 @@ function displaySchedule(row) {
 }
 
 async function bootstrap(user) {
-  const [stationRows, binRows, logRows, scheduleRows, residentRows, rewardItems, redemptionRows, staffRows, noticeRows, categoryRows, beneficiaryRows, transferRows] = await Promise.all([
+  const [stationRows, binRows, logRows, scheduleRows, residentRows, rewardItems, redemptionRows, staffRows, noticeRows, categoryRows, beneficiaryRows, transferRows, batchRows] = await Promise.all([
     sql`SELECT * FROM stations ORDER BY id`,
     sql`SELECT * FROM bins ORDER BY station_id, section`,
     sql`SELECT * FROM logs ORDER BY "time" COLLATE "C" DESC, id DESC`,
@@ -148,7 +148,16 @@ async function bootstrap(user) {
     sql`SELECT id,type,to_group,title,message,"time" FROM notifications ORDER BY id DESC`,
     sql`SELECT id,name,section,points_per_kg FROM waste_categories ORDER BY id`,
     sql`SELECT * FROM beneficiaries ORDER BY name`,
-    sql`SELECT * FROM waste_transfers ORDER BY dispatched_at COLLATE "C" DESC`,
+    sql`SELECT t.*, m.origin, e.product, e.quantity,
+      (SELECT json_agg(p.location ORDER BY p.occurred_at)::text FROM material_batch_events p
+        WHERE p.batch_id=t.batch_id AND p.kind='checkpoint') AS stops_json,
+      (SELECT COUNT(DISTINCT l.resident)::integer FROM logs l WHERE l.batch_id=t.batch_id) AS contributors
+      FROM waste_transfers t LEFT JOIN material_batches m ON m.id=t.batch_id
+      LEFT JOIN material_batch_events e ON e.batch_id=t.batch_id AND e.kind='converted'
+      ORDER BY t.dispatched_at COLLATE "C" DESC`,
+    sql`SELECT m.* FROM material_batches m WHERE NOT EXISTS (
+      SELECT 1 FROM waste_transfers t WHERE t.batch_id=m.id
+    ) ORDER BY m.collected_at DESC`,
   ]);
   const stations = stationRows.map((station) => {
     const bins = Object.fromEntries(binRows.filter((bin) => bin.station_id === station.id)
@@ -173,6 +182,11 @@ async function bootstrap(user) {
   const wasteTransfers = transferRows.map((row) => ({
     id: row.id, beneficiaryId: row.beneficiary_id, station: row.station, section: row.section, material: row.material,
     weight: row.weight, status: row.status, dispatchedAt: row.dispatched_at, receivedAt: row.received_at, staff: row.staff,
+    batchId: row.batch_id, origin: row.origin, contributors: row.contributors, product: row.product, quantity: row.quantity,
+    stops: JSON.parse(row.stops_json || '[]'),
+  }));
+  const unshippedBatches = batchRows.map(({ id, station, section, origin, material, weight }) => ({
+    id, station, section, origin, material, weight,
   }));
   const redemptions = redemptionRows.map((row) => ({
     id: row.id, resident: row.resident, items: JSON.parse(row.items), points: row.points,
@@ -195,7 +209,7 @@ async function bootstrap(user) {
   const users = user.role === 'Superadmin'
     ? (await sql`SELECT username,name,initials,role,status FROM users ORDER BY (role='Superadmin') DESC, username`).map((row) => ({ username: row.username, name: row.name, initials: row.initials, role: row.role, status: row.status }))
     : undefined;
-  return { user, users, stats, stations, grindingSchedules, logs, residents, rewardItems: [...rewardItems], redemptions, notifications, staff, upcycleYield: yields, wasteCategories, beneficiaries, wasteTransfers };
+  return { user, users, stats, stations, grindingSchedules, logs, residents, rewardItems: [...rewardItems], redemptions, notifications, staff, upcycleYield: yields, wasteCategories, beneficiaries, wasteTransfers, unshippedBatches };
 }
 
 function createId(prefix) { return `${prefix}-${randomBytes(4).toString('hex').toUpperCase()}`; }
@@ -319,9 +333,11 @@ async function handleScheduleUpdate(user, id, body) {
     if (schedule.status !== 'scheduled') fail(409, 'Only scheduled work can be updated.');
     await tx`UPDATE grinding_schedules SET status=${body.status} WHERE id=${id}`;
     if (body.status === 'completed') {
-      for (const section of JSON.parse(schedule.bins_json)) {
-        await tx`UPDATE bins SET capacity=0,weight=0,grinding_status='idle' WHERE station_id=${schedule.station} AND section=${section}`;
+      const sections = JSON.parse(schedule.bins_json).sort();
+      for (const section of sections) {
+        await tx`SELECT section FROM bins WHERE station_id=${schedule.station} AND section=${section} FOR UPDATE`;
       }
+      for (const section of sections) await sealBinBatch(tx, schedule.station, section);
       await notify(tx, 'info', 'partner+residents', `Grinding Completed — ${schedule.station}`, 'Grinded plastic is ready for collection. Partner company notified. Residents can view new upcycled output estimates.');
     }
   });
@@ -457,12 +473,18 @@ async function residentView(id) {
   };
 }
 
-function residentFromToken(req) {
+function residentFromToken(req, renew = true) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const session = residentSessions.get(token);
   if (!session || session.expires < Date.now()) { residentSessions.delete(token); fail(401, 'Session expired. Tap your card again.'); }
-  session.expires = Date.now() + RESIDENT_SESSION_MS;
-  return { id: session.id, token };
+  if (renew) session.expires = Date.now() + RESIDENT_SESSION_MS;
+  return { id: session.id, token, kioskVisit: session.kioskVisit };
+}
+
+async function recordKioskSessionEvent(residentId, visit, kind) {
+  await sql`INSERT INTO kiosk_session_events (id,resident_id,kind,location)
+    VALUES (${`${visit.id}:${kind}`},${residentId},${kind},${visit.location})
+    ON CONFLICT (id) DO NOTHING`;
 }
 
 async function kioskLogin(body) {
@@ -482,8 +504,18 @@ async function kioskLogin(body) {
   pinFailures.delete(card);
   if (row.status === 'terminated') fail(403, 'This card account has been terminated. Please see the Waste Management Department.');
   const token = randomBytes(32).toString('hex');
-  residentSessions.set(token, { id: row.id, expires: Date.now() + RESIDENT_SESSION_MS });
-  return { token, resident: await residentView(row.id) };
+  const resident = await residentView(row.id);
+  let kioskVisit;
+  if (body.source === 'kiosk') {
+    const stationId = process.env.KIOSK_STATION_ID || '';
+    const [station] = stationId
+      ? await sql`SELECT location FROM stations WHERE id=${stationId}`
+      : await sql`SELECT location FROM stations ORDER BY id LIMIT 1`;
+    kioskVisit = { id: randomBytes(16).toString('hex'), location: station?.location || 'Quezon City Hall · Circulatory Hub' };
+    await recordKioskSessionEvent(row.id, kioskVisit, 'login');
+  }
+  residentSessions.set(token, { id: row.id, expires: Date.now() + RESIDENT_SESSION_MS, kioskVisit });
+  return { token, resident };
 }
 
 async function kioskRegister(body) {
@@ -504,16 +536,55 @@ async function kioskRegister(body) {
 
 async function kioskHistory(residentId) {
   const [logRows, redemptionRows] = await Promise.all([
-    sql`SELECT * FROM logs WHERE resident=${residentId} ORDER BY "time" COLLATE "C" DESC, id DESC LIMIT 50`,
+    recentDepositRows(residentId),
     sql`SELECT * FROM redemptions WHERE resident=${residentId} ORDER BY "time" COLLATE "C" DESC LIMIT 50`,
   ]);
   const resident = await residentView(residentId);
   const deposits = logRows.map((row) => ({
     id: String(row.id), userId: residentId, userName: resident.fullName, nfcCardId: resident.nfcCardId,
-    categoryId: row.material, categoryName: row.subtype, weightKg: row.weight, pointsEarned: row.points, timestamp: stampToMs(row.time),
+    ...depositDetails(row),
   }));
   const redemptions = redemptionRows.map((row) => redemptionView(row, resident));
   return { resident, deposits, redemptions };
+}
+
+function recentDepositRows(residentId) {
+  return sql`SELECT l.*, s.location FROM logs l LEFT JOIN stations s ON s.id=l.kiosk
+    WHERE l.resident=${residentId} ORDER BY l."time" COLLATE "C" DESC, l.id DESC LIMIT 50`;
+}
+
+function depositDetails(row) {
+  return {
+    categoryId: row.material, categoryName: row.subtype || row.material, weightKg: row.weight,
+    pointsEarned: row.points, timestamp: stampToMs(row.time), stationId: row.kiosk,
+    location: row.location || row.kiosk, batchId: row.batch_id ?? null,
+  };
+}
+
+async function kioskNotifications(residentId) {
+  const [events, deposits, batchEvents] = await Promise.all([
+    sql`SELECT id,kind,location,occurred_at FROM kiosk_session_events WHERE resident_id=${residentId}
+      ORDER BY occurred_at DESC, id DESC LIMIT 50`,
+    recentDepositRows(residentId),
+    sql`SELECT e.*, m.material, m.origin, c.contributed_kg
+      FROM (SELECT batch_id, SUM(weight) AS contributed_kg FROM logs
+        WHERE resident=${residentId} AND batch_id IS NOT NULL GROUP BY batch_id) c
+      JOIN material_batches m ON m.id=c.batch_id
+      JOIN material_batch_events e ON e.batch_id=c.batch_id
+      ORDER BY e.occurred_at DESC, e.batch_id, e.kind LIMIT 50`,
+  ]);
+  return [
+    ...events.map((row) => ({
+      id: row.id, kind: row.kind, location: row.location, timestamp: new Date(row.occurred_at).getTime(),
+    })),
+    ...deposits.map((row) => ({ id: `deposit:${row.id}`, kind: 'deposit', ...depositDetails(row) })),
+    ...batchEvents.map((row) => ({
+      id: `${row.batch_id}:${row.kind}:${row.location}`, kind: `batch_${row.kind}`,
+      batchId: row.batch_id, material: row.material, origin: row.origin, location: row.location,
+      contributedKg: Number(Number(row.contributed_kg).toFixed(2)), product: row.product, quantity: row.quantity,
+      timestamp: new Date(row.occurred_at).getTime(),
+    })),
+  ].sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
 }
 
 function redemptionView(row, resident) {
@@ -521,7 +592,7 @@ function redemptionView(row, resident) {
   return {
     id: row.id, userId: resident.id, userName: resident.fullName, nfcCardId: resident.nfcCardId,
     itemId: items[0]?.id || '', itemTitle: items.map((item) => (item.qty > 1 ? `${item.name} x${item.qty}` : item.name)).join(', '),
-    pointsDeducted: row.points, timestamp: stampToMs(row.time),
+    pointsDeducted: row.points, timestamp: stampToMs(row.time), status: row.status,
   };
 }
 
@@ -557,10 +628,16 @@ async function kioskApi(req, res, pathname) {
   if (method === 'POST' && pathname === '/api/kiosk/register') return json(res, 201, await kioskRegister(await bodyJson(req)));
   if (method === 'POST' && pathname === '/api/kiosk/login') return json(res, 200, await kioskLogin(await bodyJson(req)));
 
-  const { id, token } = residentFromToken(req);
+  const isNotifications = method === 'GET' && pathname === '/api/kiosk/notifications';
+  const { id, token, kioskVisit } = residentFromToken(req, !isNotifications);
   const [account] = await sql`SELECT status FROM residents WHERE id=${id}`;
   if (!account || account.status === 'terminated') { residentSessions.delete(token); fail(401, 'Session expired. Tap your card again.'); }
-  if (method === 'POST' && pathname === '/api/kiosk/logout') { residentSessions.delete(token); return json(res, 200, { ok: true }); }
+  if (method === 'POST' && pathname === '/api/kiosk/logout') {
+    if (kioskVisit) await recordKioskSessionEvent(id, kioskVisit, 'logout');
+    residentSessions.delete(token);
+    return json(res, 200, { ok: true });
+  }
+  if (isNotifications) return json(res, 200, { notifications: await kioskNotifications(id) });
   if (method === 'GET' && pathname === '/api/kiosk/me') return json(res, 200, await kioskHistory(id));
   if (method === 'PUT' && pathname === '/api/kiosk/pin') {
     const pin = pinRecord(validPin((await bodyJson(req)).pin));
@@ -692,15 +769,15 @@ async function handleDeviceDepositEvent(req, body) {
     const [resident] = await tx`SELECT id,status FROM residents WHERE id=${residentId} FOR UPDATE`;
     if (!resident) fail(404, 'Resident not found.');
     if (resident.status === 'terminated') fail(403, 'This card account has been terminated.');
-    const [station] = await tx`SELECT id FROM stations WHERE id=${stationId}`;
+    const [station] = await tx`SELECT id,location FROM stations WHERE id=${stationId}`;
     if (!station) fail(404, 'Unknown station.');
     const [bin] = await tx`SELECT weight,capacity FROM bins WHERE station_id=${stationId} AND section=${category.section} FOR UPDATE`;
     if (bin && bin.capacity >= 100) fail(409, `The ${category.name} bin is full.`);
     await tx`LOCK TABLE logs IN SHARE ROW EXCLUSIVE MODE`;
     const [{ next }] = await tx`SELECT COALESCE(MAX(id),0)+1 AS next FROM logs`;
     const now = stamp();
-    await tx`INSERT INTO logs (id,kiosk,section,resident,material,subtype,weight,points,"time",source,idempotency_key)
-      VALUES (${next},${stationId},${category.section},${residentId},${category.id},${category.name},${weightKg},${points},${now},'machine',${idempotencyKey})`;
+    await tx`INSERT INTO logs (id,kiosk,section,resident,material,subtype,weight,points,"time",source,idempotency_key,bin_tracked)
+      VALUES (${next},${stationId},${category.section},${residentId},${category.id},${category.name},${weightKg},${points},${now},'machine',${idempotencyKey},${Boolean(bin)})`;
     await tx`UPDATE residents SET points=points+${points} WHERE id=${residentId}`;
     await tx`INSERT INTO points_ledger (resident_id,delta,reason,reference_id,created_at) VALUES (${residentId},${points},'waste_deposit',${`DEP-${next}`},${now})`;
     if (bin) {
@@ -708,7 +785,11 @@ async function handleDeviceDepositEvent(req, body) {
       await tx`UPDATE bins SET weight=${newWeight},capacity=${Math.min(100, Math.round((newWeight / BIN_CAPACITY_KG) * 1000) / 10)} WHERE station_id=${stationId} AND section=${category.section}`;
     }
     await tx`UPDATE stations SET deposits_today=deposits_today+1,last_sync=${now} WHERE id=${stationId}`;
-    const view = { id: String(next), categoryId: category.id, categoryName: category.name, weightKg, pointsEarned: points, timestamp: stampToMs(now), categoryMismatch: session.category_id !== category.id };
+    const view = {
+      id: String(next),
+      ...depositDetails({ material: category.id, subtype: category.name, weight: weightKg, points, time: now, kiosk: stationId, location: station.location }),
+      categoryMismatch: session.category_id !== category.id,
+    };
     await tx`UPDATE deposit_sessions SET status='completed',result_json=${JSON.stringify(view)} WHERE id=${session.id}`;
     return { duplicate: false, depositId: view.id, residentId, pointsEarned: points, weightKg, material: category.id, categoryMismatch: view.categoryMismatch };
   });
@@ -817,41 +898,92 @@ async function handleBeneficiaryCreate(user, body) {
   return { id };
 }
 
+async function sealBinBatch(tx, station, section) {
+  const [bin] = await tx`SELECT b.label,b.weight,s.location FROM bins b JOIN stations s ON s.id=b.station_id
+    WHERE b.station_id=${station} AND b.section=${section} FOR UPDATE OF b`;
+  if (!bin) fail(400, 'Choose a valid kiosk bin.');
+  const weight = Math.round(bin.weight * 100) / 100;
+  if (!(weight > 0)) return null;
+  const id = `BATCH-${randomBytes(8).toString('hex').toUpperCase()}`;
+  const [batch] = await tx`INSERT INTO material_batches (id,station,section,origin,material,weight)
+    VALUES (${id},${station},${section},${bin.location},${bin.label},${weight}) RETURNING *`;
+  await tx`UPDATE logs SET batch_id=${id} WHERE kiosk=${station} AND section=${section}
+    AND bin_tracked AND batch_id IS NULL`;
+  await tx`UPDATE bins SET weight=0,capacity=0,grinding_status='idle' WHERE station_id=${station} AND section=${section}`;
+  return batch;
+}
+
+async function recordBatchEvent(tx, batchId, kind, location, product = null, quantity = null) {
+  await tx`INSERT INTO material_batch_events (batch_id,kind,location,product,quantity)
+    VALUES (${batchId},${kind},${location},${product},${quantity}) ON CONFLICT DO NOTHING`;
+}
+
 async function handleTransferCreate(user, body) {
   requireRole(user, ['Supervisor', 'Administrator', 'Superadmin']);
   const idempotencyKey = textField(body.idempotencyKey, 'Idempotency key', 100);
-  const [existing] = await sql`SELECT id FROM waste_transfers WHERE idempotency_key=${idempotencyKey}`;
-  if (existing) return { id: existing.id, duplicate: true };
   const beneficiaryId = textField(body.beneficiaryId, 'Beneficiary', 30);
-  const station = textField(body.station, 'Station', 20);
-  const section = textField(body.section, 'Section', 20);
-  const id = createId('WT');
-  await sql.begin(async (tx) => {
-    const [beneficiary] = await tx`SELECT name FROM beneficiaries WHERE id=${beneficiaryId}`;
+  const selectedBatch = body.batchId ? textField(body.batchId, 'Batch ID', 30) : null;
+  return sql.begin(async (tx) => {
+    await tx`SELECT pg_advisory_xact_lock(hashtext(${`waste-transfer:${idempotencyKey}`}))`;
+    const [existing] = await tx`SELECT id,batch_id FROM waste_transfers WHERE idempotency_key=${idempotencyKey}`;
+    if (existing) return { id: existing.id, batchId: existing.batch_id, duplicate: true };
+    const [beneficiary] = await tx`SELECT name,address FROM beneficiaries WHERE id=${beneficiaryId}`;
     if (!beneficiary) fail(400, 'Choose a valid beneficiary.');
-    const [bin] = await tx`SELECT label,weight FROM bins WHERE station_id=${station} AND section=${section} FOR UPDATE`;
-    if (!bin) fail(400, 'Choose a valid kiosk bin.');
-    // The handover is the weight the bin's load cell reports. Staff cannot type a different number.
-    const weight = Math.round(bin.weight * 100) / 100;
-    if (!(weight > 0)) fail(409, 'That bin is empty.');
-    await tx`UPDATE bins SET weight=0,capacity=0 WHERE station_id=${station} AND section=${section}`;
-    await tx`INSERT INTO waste_transfers (id,beneficiary_id,station,section,material,weight,status,dispatched_at,staff,idempotency_key)
-      VALUES (${id},${beneficiaryId},${station},${section},${bin.label},${weight},'dispatched',${stamp()},${user.name},${idempotencyKey})`;
-    await notify(tx, 'info', 'beneficiaries', `Waste Dispatched — ${beneficiary.name}`, `${weight.toFixed(1)} kg of ${bin.label} from ${station} is on its way to ${beneficiary.name}.`);
+    let batch;
+    if (selectedBatch) {
+      [batch] = await tx`SELECT * FROM material_batches WHERE id=${selectedBatch} FOR UPDATE`;
+      if (!batch) fail(404, 'Batch not found.');
+      const [dispatched] = await tx`SELECT id FROM waste_transfers WHERE batch_id=${selectedBatch}`;
+      if (dispatched) fail(409, 'That batch has already been dispatched.');
+    } else {
+      batch = await sealBinBatch(tx, textField(body.station, 'Station', 20), textField(body.section, 'Section', 20));
+      if (!batch) fail(409, 'That bin is empty.');
+    }
+    const id = createId('WT');
+    await tx`INSERT INTO waste_transfers (id,beneficiary_id,station,section,material,weight,status,dispatched_at,staff,idempotency_key,batch_id)
+      VALUES (${id},${beneficiaryId},${batch.station},${batch.section},${batch.material},${batch.weight},'dispatched',${stamp()},${user.name},${idempotencyKey},${batch.id})`;
+    await recordBatchEvent(tx, batch.id, 'dispatched', beneficiaryAddress(beneficiary));
+    await notify(tx, 'info', 'beneficiaries', `Waste Dispatched — ${beneficiary.name}`, `${batch.id} is on its way from ${batch.origin} to ${beneficiary.name}.`);
+    return { id, batchId: batch.id, duplicate: false };
   });
-  return { id, duplicate: false };
+}
+
+function beneficiaryAddress({ name, address }) {
+  return address ? `${name} · ${address}` : name;
 }
 
 async function handleTransferReceive(user, id) {
   requireRole(user, ['Supervisor', 'Administrator', 'Superadmin']);
   await sql.begin(async (tx) => {
-    const [transfer] = await tx`SELECT t.status,t.weight,t.material,b.name FROM waste_transfers t JOIN beneficiaries b ON b.id=t.beneficiary_id WHERE t.id=${id} FOR UPDATE OF t`;
+    const [transfer] = await tx`SELECT t.status,t.batch_id,b.name,b.address FROM waste_transfers t
+      JOIN beneficiaries b ON b.id=t.beneficiary_id WHERE t.id=${id} FOR UPDATE OF t`;
     if (!transfer) fail(404, 'Transfer not found.');
     if (transfer.status === 'received') fail(409, 'This transfer is already marked received.');
     await tx`UPDATE waste_transfers SET status='received',received_at=${stamp()} WHERE id=${id}`;
-    await notify(tx, 'info', 'residents', `Waste Received — ${transfer.name}`, `${transfer.name} received ${transfer.weight.toFixed(1)} kg of ${transfer.material}. Thank you for segregating!`);
+    if (transfer.batch_id) await recordBatchEvent(tx, transfer.batch_id, 'arrived', beneficiaryAddress(transfer));
   });
   return { id, status: 'received' };
+}
+
+async function handleBatchUpdate(user, id, body) {
+  requireRole(user, ['Supervisor', 'Administrator', 'Superadmin']);
+  const { kind } = body;
+  if (kind !== 'checkpoint' && kind !== 'converted') fail(400, 'Choose a route stop or conversion.');
+  await sql.begin(async (tx) => {
+    const [transfer] = await tx`SELECT t.status,t.batch_id,b.name,b.address FROM waste_transfers t
+      JOIN beneficiaries b ON b.id=t.beneficiary_id WHERE t.id=${id} FOR UPDATE OF t`;
+    if (!transfer?.batch_id) fail(404, 'Tracked transfer not found.');
+    if (kind === 'checkpoint') {
+      if (transfer.status !== 'dispatched') fail(409, 'Route stops can only be recorded before delivery.');
+      return recordBatchEvent(tx, transfer.batch_id, kind, textField(body.location, 'Stop location', 150));
+    }
+    if (transfer.status !== 'received') fail(409, 'Mark the batch received before recording its conversion.');
+    const product = textField(body.product, 'Product', 100);
+    const quantity = Number(body.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 2147483647) fail(400, 'Enter a valid whole-number quantity.');
+    await recordBatchEvent(tx, transfer.batch_id, kind, beneficiaryAddress(transfer), product, quantity);
+  });
+  return { id, kind };
 }
 
 const contentTypes = new Map([
@@ -955,6 +1087,8 @@ async function api(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/waste-transfers') return json(res, 201, await handleTransferCreate(user, await bodyJson(req)));
   const transferMatch = pathname.match(/^\/api\/waste-transfers\/([A-Za-z0-9-]+)\/receive$/);
   if (req.method === 'POST' && transferMatch) return json(res, 200, await handleTransferReceive(user, transferMatch[1]));
+  const batchUpdateMatch = pathname.match(/^\/api\/waste-transfers\/([A-Za-z0-9-]+)\/batch-updates$/);
+  if (req.method === 'POST' && batchUpdateMatch) return json(res, 201, await handleBatchUpdate(user, batchUpdateMatch[1], await bodyJson(req)));
   if (req.method === 'POST' && pathname === '/api/grinding-schedules') return json(res, 201, { schedule: await handleScheduleCreate(user, await bodyJson(req)) });
   const scheduleMatch = pathname.match(/^\/api\/grinding-schedules\/([A-Za-z0-9-]+)$/);
   if (req.method === 'PATCH' && scheduleMatch) return json(res, 200, { schedule: await handleScheduleUpdate(user, scheduleMatch[1], await bodyJson(req)) });
