@@ -86,7 +86,7 @@ export default function AuthScreen({ onAuthenticated, notice }) {
         title={step === 'register' ? 'Create your' : 'Welcome to'} accent={step === 'register' ? 'account.' : 'ECO-TAP.'}
         intro={step === 'card' ? 'Sign in with your ECO-TAP card. Tap it on the back of your phone or type the card ID.'
           : step === 'pin' ? 'Enter your 6-digit PIN to continue.'
-          : 'This card is new. Register it and get 50 welcome points.'} />
+          : 'This card is new. Register it to create your ECO-TAP account.'} />
 
       <Banner kind="error">{notice}</Banner>
       <Banner kind="error" onClose={() => setError('')}>{error}</Banner>

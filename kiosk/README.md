@@ -2,7 +2,7 @@
 
 The resident-facing NFC kiosk, converted from the Kotlin / Jetpack Compose app in `../mobile-android`. It talks to the same server and `/api/kiosk/*` routes, with the same behaviour:
 
-1. **Tap card** – reads the NFC UID (`ECO-TAP-<UID>`). Unknown card → registration (name, address, 6-digit PIN, 50-point welcome bonus). Known card → PIN pad.
+1. **Tap card** – reads the NFC UID (`ECO-TAP-<UID>`). Unknown card → registration (name, address, 6-digit PIN). Known card → PIN pad.
 2. **PIN login** – checked by the server only. A login lasts 15 minutes of inactivity; a 401 sends the kiosk back to the tap screen.
 3. **Deposit** – pick PET / HDPE, the machine weighs, the server awards points. There is no weight entry.
 4. **Reward point conversion**, **Rewards POS** (redemptions show as *pending* in the portal), **Card inquiry** (ledger, change PIN).

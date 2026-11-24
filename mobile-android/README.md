@@ -4,7 +4,7 @@ The resident-facing NFC kiosk app, rebuilt on the same server and database as th
 
 ## What it does
 
-1. **Tap card** – reads the NFC UID (`ECO-TAP-<UID>`). Unknown card → resident registration (name, address, 6-digit PIN, 50-point welcome bonus). Known card → PIN pad.
+1. **Tap card** – reads the NFC UID (`ECO-TAP-<UID>`). Unknown card → resident registration (name, address, 6-digit PIN). Known card → PIN pad.
 2. **PIN login** – the server checks the PIN (never the phone). 5 wrong PINs locks that card for a minute. A login lasts 15 minutes of inactivity.
 3. **Rewards POS** – lists the rewards from the portal's *Rewards* desk and redeems one with the resident's points. The redemption appears in the portal as **pending**, so staff can hand over the item and mark it fulfilled.
 4. **Deposit segregated waste** – pick a category (PET / HDPE), set the weight shown on the scale, confirm. The server calculates and awards the points (`POST /api/kiosk/deposit`).

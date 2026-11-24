@@ -4,7 +4,7 @@ The resident-facing Android app. It talks to the same server and database as the
 
 | Screen | What it does | API |
 |---|---|---|
-| Sign in | Card ID (typed or tapped via NFC) + 6-digit PIN. New cards register and get the 50-point bonus. | `POST card`, `register`, `login` |
+| Sign in | Card ID (typed or tapped via NFC) + 6-digit PIN. New cards register with a zero point balance. | `POST card`, `register`, `login` |
 | Home | Real points, total kg, recent deposits, kiosk status | `GET me`, `stations` |
 | Deposit | Pick PET or HDPE, open a session, wait for the machine's weight, see the points awarded | `POST deposit/start`, `GET deposit/:id`, `POST deposit/:id/cancel` |
 | Rewards | Rewards from the portal's rewards desk; redeem with points (shows as *pending* for staff) | `GET rewards`, `POST redeem` |

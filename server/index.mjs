@@ -413,7 +413,6 @@ async function handleUpcycleNotice(user, body) {
 // which returns a short-lived bearer token.
 // ---------------------------------------------------------------------------
 const KIOSK_BARANGAY = 'Barangay Central, Quezon City';
-const REGISTRATION_BONUS = 50;
 const RESIDENT_SESSION_MS = 15 * 60_000;
 const residentSessions = new Map(); // token -> { id, expires }
 const pinFailures = new Map();
@@ -498,8 +497,7 @@ async function kioskRegister(body) {
     if (taken) fail(409, 'This card is already registered.');
     const now = stamp();
     await tx`INSERT INTO residents (id,name,points,phone,nfc_card_id,pin_salt,pin_hash,address,registered_at)
-      VALUES (${id},${name},${REGISTRATION_BONUS},'',${card},${pin.pin_salt},${pin.pin_hash},${address},${now.slice(0, 10)})`;
-    await tx`INSERT INTO points_ledger (resident_id,delta,reason,reference_id,created_at) VALUES (${id},${REGISTRATION_BONUS},'registration_bonus',${`REG-${id}`},${now})`;
+      VALUES (${id},${name},0,'',${card},${pin.pin_salt},${pin.pin_hash},${address},${now.slice(0, 10)})`;
   });
   return { resident: await residentView(id) };
 }
