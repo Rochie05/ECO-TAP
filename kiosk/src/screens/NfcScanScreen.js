@@ -3,13 +3,17 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { C } from '../theme';
 import { Hero } from '../components';
 
-export default function NfcScanScreen() {
+export default function NfcScanScreen({ wide }) {
+  const hint = <Text style={s.hint}>Hold your card flat against the back of the phone until it is detected.</Text>;
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
-      <Text accessibilityRole="header" style={s.title}>Tap your Eco-Card</Text>
-      <Text style={s.intro}>Sign in to deposit recyclables, check your points, or redeem rewards.</Text>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, wide && s.wideContent]}>
+      <View style={wide && s.column}>
+        <Text accessibilityRole="header" style={s.title}>Tap your Eco-Card</Text>
+        <Text style={s.intro}>Sign in to deposit recyclables, check your points, or redeem rewards.</Text>
+        {wide && hint}
+      </View>
 
-      <Hero style={s.reader}>
+      <Hero style={[s.reader, wide && s.column]}>
         <View accessible={false} style={s.cardArt}>
           <View style={s.chip} />
           <Text style={s.contactless}>)))</Text>
@@ -21,7 +25,7 @@ export default function NfcScanScreen() {
         </View>
       </Hero>
 
-      <Text style={s.hint}>Hold your card flat against the back of this device until it is detected.</Text>
+      {!wide && hint}
     </ScrollView>
   );
 }
@@ -29,6 +33,8 @@ export default function NfcScanScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1 },
   content: { padding: 20, paddingTop: 30, width: '100%', maxWidth: 580, alignSelf: 'center' },
+  wideContent: { flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 28, maxWidth: 1120, paddingTop: 20 },
+  column: { flex: 1, minWidth: 0 },
   title: { fontSize: 38, fontWeight: '900', color: C.darkPine, letterSpacing: -1.5 },
   intro: { fontSize: 15, lineHeight: 22, color: C.textMuted, marginTop: 6, marginBottom: 22 },
   reader: { minHeight: 244, alignItems: 'center', justifyContent: 'center', gap: 24 },

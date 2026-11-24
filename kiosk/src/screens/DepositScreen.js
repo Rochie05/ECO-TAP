@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { alpha, C } from '../theme';
-import { Button, Card, HeaderCard, OutlinedButton } from '../components';
+import { Button, Card, HeaderCard, OutlinedButton, ServiceLayout } from '../components';
 
 const POLL_INTERVAL_MS = 1500;
 
@@ -18,7 +18,7 @@ const TITLES = {
  * opens a deposit session on the server. The machine's load cell and optical sensor report the measured weight
  * and detected material, and the server calculates and awards the points. This screen just waits for that result.
  */
-export default function DepositScreen({ user, categories, busy, onStart, onPoll, onCancel, onBackToMenu }) {
+export default function DepositScreen({ wide, user, categories, busy, onStart, onPoll, onCancel, onBackToMenu }) {
   const [step, setStep] = useState('CATEGORY');
   const [category, setCategory] = useState(null);
   const [sessionId, setSessionId] = useState(null);
@@ -55,15 +55,43 @@ export default function DepositScreen({ user, categories, busy, onStart, onPoll,
     if (id) { setSessionId(id); setStep('WEIGHING'); }
   };
 
-  return (
-    <View style={s.screen}>
-      <HeaderCard
-        eyebrow="DEPOSIT SEGREGATED WASTE"
-        title={TITLES[step]}
-        subtitle={`Resident: ${user.fullName} · ${user.ecoPoints} pts`}
-      />
+  const summary = (
+    <HeaderCard
+      eyebrow="DEPOSIT SEGREGATED WASTE"
+      title={TITLES[step]}
+      subtitle={`Resident: ${user.fullName} · ${user.ecoPoints} pts`}
+    />
+  );
+  const actions = (
+    <View style={[s.actions, wide && s.stackedActions]}>
+      {step === 'CATEGORY' ? (
+        <>
+          <OutlinedButton title="Back to menu" onPress={onBackToMenu} style={!wide && s.action} radius={20} height={40} />
+          <Button title={busy ? 'Starting…' : 'Start deposit'} disabled={!category || busy} onPress={start} style={!wide && s.action} radius={20} height={40} />
+        </>
+      ) : null}
+      {step === 'WEIGHING' ? (
+        <OutlinedButton
+          title="Cancel deposit"
+          onPress={() => { if (sessionId) onCancel(sessionId); startOver(); }}
+          style={!wide && s.action}
+          radius={20}
+          height={40}
+        />
+      ) : null}
+      {step === 'DONE' ? (
+        <>
+          <OutlinedButton title="Back to menu" onPress={onBackToMenu} style={!wide && s.action} radius={20} height={40} />
+          <Button title="Deposit more" onPress={startOver} style={!wide && s.action} radius={20} height={40} />
+        </>
+      ) : null}
+    </View>
+  );
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 10 }}>
+  return (
+    <ServiceLayout wide={wide} summary={summary} actions={actions}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 10 }} persistentScrollbar>
+        {!wide && summary}
         {step === 'CATEGORY' ? (
           <>
             {notice ? <Text style={s.notice}>{notice}</Text> : null}
@@ -111,36 +139,14 @@ export default function DepositScreen({ user, categories, busy, onStart, onPoll,
           </Card>
         ) : null}
       </ScrollView>
-
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        {step === 'CATEGORY' ? (
-          <>
-            <OutlinedButton title="Back to menu" onPress={onBackToMenu} style={{ flex: 1 }} radius={20} height={40} />
-            <Button title={busy ? 'Starting…' : 'Start deposit'} disabled={!category || busy} onPress={start} style={{ flex: 1 }} radius={20} height={40} />
-          </>
-        ) : null}
-        {step === 'WEIGHING' ? (
-          <OutlinedButton
-            title="Cancel deposit"
-            onPress={() => { if (sessionId) onCancel(sessionId); startOver(); }}
-            style={{ flex: 1 }}
-            radius={20}
-            height={40}
-          />
-        ) : null}
-        {step === 'DONE' ? (
-          <>
-            <OutlinedButton title="Back to menu" onPress={onBackToMenu} style={{ flex: 1 }} radius={20} height={40} />
-            <Button title="Deposit more" onPress={startOver} style={{ flex: 1 }} radius={20} height={40} />
-          </>
-        ) : null}
-      </View>
-    </View>
+    </ServiceLayout>
   );
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.surfaceBg, padding: 20, gap: 14 },
+  actions: { flexDirection: 'row', gap: 10 },
+  stackedActions: { flexDirection: 'column' },
+  action: { flex: 1 },
   notice: { fontSize: 13, fontWeight: '500', color: C.darkPine },
   loading: { fontSize: 13, color: C.darkPine },
   categoryRow: { padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -1,8 +1,24 @@
 // Port of ui/components/CommonComponents.kt plus the small Compose pieces the screens share (Card, Button, OutlinedButton).
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { alpha, C } from './theme';
 import { AppMode } from './controller';
+import { KIOSK_LOCATION } from './config';
+
+export function ServiceLayout({ wide, summary, actions, children }) {
+  return (
+    <View style={[s.serviceScreen, wide && s.serviceWide]}>
+      {wide ? (
+        <ScrollView style={s.serviceSide} contentContainerStyle={s.serviceControls} keyboardShouldPersistTaps="handled">
+          {summary}
+          {actions}
+        </ScrollView>
+      ) : null}
+      <View style={s.serviceContent}>{children}</View>
+      {!wide && actions}
+    </View>
+  );
+}
 
 /** Compose Card: rounded surface with an optional border and elevation. */
 export function Card({ children, style, radius = 20, color = C.cardBg, border, elevation = 0, onPress }) {
@@ -77,17 +93,17 @@ export function HeaderCard({ eyebrow, title, subtitle, right }) {
 }
 
 /** KioskHeader: brand bar with Exit / Back. `topInset` is the status-bar height (Compose statusBarsPadding). */
-export function KioskHeader({ currentMode, user, onLogout, topInset = 0 }) {
+export function KioskHeader({ currentMode, user, onLogout, topInset = 0, compact = false }) {
   const showExit = user != null && currentMode !== AppMode.NFC_SCAN && currentMode !== AppMode.PIN_ENTRY;
   const showBack = !showExit && currentMode !== AppMode.NFC_SCAN;
   return (
-    <View style={[s.header, { paddingTop: topInset + 12 }]}>
+    <View style={[s.header, { paddingTop: topInset + (compact ? 5 : 12) }, compact && s.compactHeader]}>
       <View style={s.headerLeft}>
-        <Image source={require('../assets/eco-tap-logo.png')} style={s.logo} resizeMode="contain" />
+        <Image source={require('../assets/eco-tap-logo.png')} style={[s.logo, compact && s.compactLogo]} resizeMode="contain" />
         <View style={{ marginLeft: 10, flexShrink: 1 }}>
 
           <Text style={s.brand}>ECO-TAP</Text>
-          <Text style={s.brandSub}>Quezon City · Barangay Central</Text>
+          <Text style={s.brandSub}>{KIOSK_LOCATION}</Text>
         </View>
       </View>
       {showExit ? (
@@ -104,7 +120,7 @@ export function KioskHeader({ currentMode, user, onLogout, topInset = 0 }) {
   );
 }
 
-/** BannerNotification: dismissable message strip (the ViewModel clears it after 10 seconds). */
+/** Dismissible notification that overlays the screen without resizing it. */
 export function BannerNotification({ message, onDismiss }) {
   if (message == null) return null;
   return (
@@ -133,6 +149,11 @@ export function MetricCard({ title, value, subtitle, icon, style }) {
 }
 
 const s = StyleSheet.create({
+  serviceScreen: { flex: 1, backgroundColor: C.surfaceBg, padding: 20, gap: 14 },
+  serviceWide: { flexDirection: 'row', gap: 20, paddingVertical: 12 },
+  serviceSide: { flex: 0.85, minWidth: 0 },
+  serviceControls: { gap: 10, paddingBottom: 4 },
+  serviceContent: { flex: 1, minWidth: 0 },
   row: { flexDirection: 'row', alignItems: 'center' },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.4 },
@@ -148,12 +169,15 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  compactHeader: { paddingBottom: 5 },
   logo: { width: 52, height: 52 },
+  compactLogo: { width: 36, height: 36 },
   brand: { color: C.darkPine, fontSize: 16, fontWeight: '900', letterSpacing: 0.5 },
   brandSub: { color: C.textMuted, fontSize: 12 },
   exit: { minHeight: 44, borderRadius: 16, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
   banner: {
-    marginHorizontal: 16, marginVertical: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
+    position: 'absolute', top: 6, left: 16, right: 16, zIndex: 1,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12,
     backgroundColor: C.iceMint, borderWidth: 1, borderColor: C.warmGray, elevation: 2,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },

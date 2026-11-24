@@ -112,7 +112,11 @@ test('redeem blocks when points are short, and deducts when enough', async () =>
   await signIn(kiosk);
   await kiosk.redeemRewardItem(rewards[1]);
   assert.match(kiosk.getState().banner, /Insufficient Eco-Points. Required: 500, Current: 120/);
-  await kiosk.redeemRewardItem(rewards[0]);
+  const receipt = await kiosk.redeemRewardItem(rewards[0], 'receipt-key');
+  assert.equal(receipt.redemption.id, 'x1');
+  assert.equal(receipt.redemption.pointsDeducted, 100);
+  assert.equal(receipt.balance, 20);
+  await kiosk.redeemRewardItem(rewards[0], 'receipt-key', true);
   assert.equal(kiosk.getState().authenticatedUser.ecoPoints, 20);
   assert.equal(kiosk.getState().redemptions.length, 1);
   assert.match(kiosk.getState().banner, /Redemption successful! 100 points deducted/);
@@ -165,15 +169,15 @@ test('changePin reports success and failure', async () => {
   ok.dispose(); bad.dispose();
 });
 
-test('banner clears itself after 10 seconds, but not if replaced', async (t) => {
+test('banner clears five seconds after the latest message', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const kiosk = new KioskController(fakeApi());
   kiosk.showBanner('one');
-  t.mock.timers.tick(9000);
+  t.mock.timers.tick(4000);
   kiosk.showBanner('two');
-  t.mock.timers.tick(9000);
+  t.mock.timers.tick(4999);
   assert.equal(kiosk.getState().banner, 'two');
-  t.mock.timers.tick(1500);
+  t.mock.timers.tick(1);
   assert.equal(kiosk.getState().banner, null);
   kiosk.dispose();
 });

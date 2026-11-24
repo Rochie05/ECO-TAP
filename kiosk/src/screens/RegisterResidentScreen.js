@@ -21,7 +21,7 @@ function Field({ label, placeholder, value, onChangeText, keyboardType, secure }
   );
 }
 
-export default function RegisterResidentScreen({ scannedNfcCardId, onCreateAccount, onCancel }) {
+export default function RegisterResidentScreen({ wide, scannedNfcCardId, onCreateAccount, onCancel }) {
   const [fullName, setFullName] = useState('');
   const [address, setAddress] = useState('');
   const [pinCode, setPinCode] = useState('');
@@ -34,46 +34,56 @@ export default function RegisterResidentScreen({ scannedNfcCardId, onCreateAccou
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.surfaceBg }} contentContainerStyle={{ padding: 20, gap: 12 }} keyboardShouldPersistTaps="handled">
-      <Card radius={22} color={C.darkPine} elevation={6} style={{ padding: 20, alignItems: 'center' }}>
-        <View style={s.tag}><Text style={s.tagText}>NEW NFC CARD DETECTED</Text></View>
-        <Text style={s.title}>Resident Account Setup</Text>
-        <Text style={s.sub}>Link this NFC card to a new resident profile to start earning Eco-Points</Text>
-      </Card>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, wide && s.wideContent]} keyboardShouldPersistTaps="handled">
+      <View style={[s.column, wide && s.wideColumn]}>
+        <Card radius={22} color={C.darkPine} elevation={6} style={{ padding: 20, alignItems: 'center' }}>
+          <View style={s.tag}><Text style={s.tagText}>NEW NFC CARD DETECTED</Text></View>
+          <Text style={s.title}>Resident Account Setup</Text>
+          <Text style={s.sub}>Link this NFC card to a new resident profile to start earning Eco-Points</Text>
+        </Card>
 
-      <Card radius={16} elevation={2} style={{ padding: 16, flexDirection: 'row', alignItems: 'center' }}>
-        <View style={s.cardIcon}><Text style={{ fontSize: 24 }}>💳</Text></View>
-        <View style={{ marginLeft: 14, flex: 1 }}>
-          <Text style={s.uidLabel}>DETECTED NFC CARD UID</Text>
-          <Text style={s.uid}>{scannedNfcCardId}</Text>
+        <Card radius={16} elevation={2} style={{ padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={s.cardIcon}><Text style={{ fontSize: 24 }}>💳</Text></View>
+          <View style={{ marginLeft: 14, flex: 1 }}>
+            <Text style={s.uidLabel}>DETECTED NFC CARD UID</Text>
+            <Text style={s.uid}>{scannedNfcCardId}</Text>
+          </View>
+        </Card>
+
+      </View>
+
+      <View style={[s.column, wide && s.wideColumn]}>
+        <Card radius={20} elevation={2} style={{ padding: 20 }}>
+          <Text style={s.formTitle}>RESIDENT REGISTRATION FORM</Text>
+          <View style={{ marginTop: 4 }}>
+            <Field label="Resident Full Name" placeholder="e.g. Juan Dela Cruz" value={fullName} onChangeText={setFullName} />
+            <Field label="Barangay Address" placeholder="e.g. 12 Mayaman St, Quezon City" value={address} onChangeText={setAddress} />
+            <Field
+              label="Set 6-Digit Security PIN"
+              placeholder="e.g. 123456"
+              value={pinCode}
+              keyboardType="number-pad"
+              onChangeText={(t) => { if (t.length <= 6 && /^\d*$/.test(t)) setPinCode(t); }}
+            />
+          </View>
+          {errorMessage != null ? <Text style={s.error}>{errorMessage}</Text> : null}
+        </Card>
+
+        <View style={{ gap: 10, marginTop: 4 }}>
+          <Button title="Create Account & Link Card ➔" onPress={submit} height={52} fontSize={15} />
+          <OutlinedButton title="Cancel" onPress={onCancel} textColor={C.textMuted} borderColor={C.warmGray} radius={16} fontSize={14} />
         </View>
-      </Card>
-
-      <Card radius={20} elevation={2} style={{ padding: 20 }}>
-        <Text style={s.formTitle}>RESIDENT REGISTRATION FORM</Text>
-        <View style={{ marginTop: 4 }}>
-          <Field label="Resident Full Name" placeholder="e.g. Juan Dela Cruz" value={fullName} onChangeText={setFullName} />
-          <Field label="Barangay Address" placeholder="e.g. 12 Mayaman St, Quezon City" value={address} onChangeText={setAddress} />
-          <Field
-            label="Set 6-Digit Security PIN"
-            placeholder="e.g. 123456"
-            value={pinCode}
-            keyboardType="number-pad"
-            onChangeText={(t) => { if (t.length <= 6 && /^\d*$/.test(t)) setPinCode(t); }}
-          />
-        </View>
-        {errorMessage != null ? <Text style={s.error}>{errorMessage}</Text> : null}
-      </Card>
-
-      <View style={{ gap: 10, marginTop: 4 }}>
-        <Button title="Create Account & Link Card ➔" onPress={submit} height={52} fontSize={15} />
-        <OutlinedButton title="Cancel" onPress={onCancel} textColor={C.textMuted} borderColor={C.warmGray} radius={16} fontSize={14} />
       </View>
     </ScrollView>
   );
 }
 
 const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.surfaceBg },
+  content: { padding: 20, gap: 12, width: '100%', maxWidth: 680, alignSelf: 'center' },
+  wideContent: { flexDirection: 'row', alignItems: 'flex-start', maxWidth: 1120, paddingVertical: 12 },
+  column: { gap: 12 },
+  wideColumn: { flex: 1, minWidth: 0 },
   tag: { backgroundColor: C.goldAmber, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   tagText: { fontSize: 10, fontWeight: '900', color: C.black },
   title: { fontSize: 22, fontWeight: '900', color: C.white, marginTop: 8 },

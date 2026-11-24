@@ -49,8 +49,10 @@ test('redeem sends a fresh idempotency key each time; deposit ids are URL-encode
   await api.redeem({ id: 'g1' }); await api.redeem({ id: 'g1' });
   const k1 = JSON.parse(calls[0].init.body).idempotencyKey; const k2 = JSON.parse(calls[1].init.body).idempotencyKey;
   assert.notEqual(k1, k2);
+  await api.redeem({ id: 'g1' }, k1);
+  assert.equal(JSON.parse(calls[2].init.body).idempotencyKey, k1);
   await api.depositStatus('a/b');
-  assert.ok(calls[2].url.endsWith('/api/kiosk/deposit/a%2Fb'));
+  assert.ok(calls[3].url.endsWith('/api/kiosk/deposit/a%2Fb'));
 });
 
 test('changePin rejects non-6-digit PINs without calling the server', async () => {

@@ -17,7 +17,7 @@ const ACTIVE_MODES = new Set([
   AppMode.MAIN_MENU, AppMode.CARD_INQUIRY, AppMode.REWARDS_POS, AppMode.DEPOSIT, AppMode.POINT_CONVERSION,
 ]);
 
-const BANNER_MS = 10000;
+const BANNER_MS = 5000;
 
 export class KioskController {
   constructor(api = defaultApi) {
@@ -188,20 +188,28 @@ export class KioskController {
 
   // --- Rewards POS ---
 
-  redeemRewardItem = async (item) => {
+  redeemRewardItem = async (item, idempotencyKey, retry = false) => {
     const user = this.state.authenticatedUser;
     if (!user || this.state.busy) return;
-    if (user.ecoPoints < item.pointsCost) {
+    if (!retry && user.ecoPoints < item.pointsCost) {
       this.showBanner(`Insufficient Eco-Points. Required: ${item.pointsCost}, Current: ${user.ecoPoints}`);
       return;
     }
     this.set({ busy: true });
     try {
-      const result = await this.api.redeem(item);
-      this.set({ authenticatedUser: result.resident, redemptions: [result.redemption, ...this.state.redemptions] });
-      this.showBanner(`Redemption successful! ${item.pointsCost} points deducted. Show this to the staff to claim your item.`);
-    } catch (e) { this.handleFailure(e); }
-    this.set({ busy: false });
+      const { resident, redemption } = await this.api.redeem(item, idempotencyKey);
+      if (this.state.authenticatedUser?.id !== user.id || !this.loggedIn) return;
+      this.set({
+        authenticatedUser: resident,
+        redemptions: [redemption, ...this.state.redemptions.filter((entry) => entry.id !== redemption.id)],
+      });
+      this.showBanner(`Redemption successful! ${redemption.pointsDeducted} points deducted. Show your receipt to staff to claim your reward.`);
+      return { redemption, balance: resident.ecoPoints };
+    } catch (error) {
+      this.handleFailure(error);
+    } finally {
+      this.set({ busy: false });
+    }
   };
 
   // --- Deposit segregated waste (select category -> machine weighs -> server awards points) ---

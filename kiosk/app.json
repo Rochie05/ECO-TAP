@@ -5,7 +5,7 @@
     "scheme": "ecotapkiosk",
     "version": "1.0.0",
     "platforms": ["android"],
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "light",
     "splash": { "backgroundColor": "#1E3A38" },
     "android": {

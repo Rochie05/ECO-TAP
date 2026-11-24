@@ -1,6 +1,6 @@
 // Port of MainActivity.kt: NFC reader lifecycle, header + banner, and the screen switch on the current mode.
 import React, { useCallback, useEffect, useRef } from 'react';
-import { AppState, BackHandler, StatusBar, StyleSheet, View } from 'react-native';
+import { AppState, BackHandler, StatusBar, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppMode } from './src/controller';
 import { useKiosk } from './src/useKiosk';
@@ -31,6 +31,8 @@ const SERVICE_MODES = new Set([AppMode.CARD_INQUIRY, AppMode.REWARDS_POS, AppMod
 
 function Kiosk() {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const compact = width > height && width >= 560;
   const [state, kiosk] = useKiosk();
   const { currentMode: mode, authenticatedUser: user } = state;
 
@@ -65,10 +67,11 @@ function Kiosk() {
 
   let screen = null;
   if (mode === AppMode.NFC_SCAN) {
-    screen = <NfcScanScreen />;
+    screen = <NfcScanScreen wide={compact} />;
   } else if (mode === AppMode.REGISTRATION) {
     screen = (
       <RegisterResidentScreen
+        wide={compact}
         scannedNfcCardId={state.unregisteredNfcId ?? 'ECO-TAP-NFC'}
         onCreateAccount={kiosk.createAccountAndLinkCard}
         onCancel={() => kiosk.navigateTo(AppMode.NFC_SCAN)}
@@ -79,6 +82,7 @@ function Kiosk() {
     if (mode === AppMode.PIN_ENTRY) {
       screen = (
         <PinEntryScreen
+          wide={compact}
           user={user}
           pinInput={state.pinInput}
           errorMessage={state.pinError}
@@ -89,16 +93,17 @@ function Kiosk() {
         />
       );
     } else if (mode === AppMode.MAIN_MENU) {
-      screen = <KioskMenuScreen user={user} onNavigate={kiosk.navigateTo} />;
+      screen = <KioskMenuScreen wide={compact} user={user} onNavigate={kiosk.navigateTo} />;
     } else if (mode === AppMode.CARD_INQUIRY) {
       screen = (
-        <CardInquiryScreen user={user} deposits={state.deposits} redemptions={state.redemptions} onUpdatePin={kiosk.updatePin} onBackToMenu={back} />
+        <CardInquiryScreen wide={compact} user={user} deposits={state.deposits} redemptions={state.redemptions} onUpdatePin={kiosk.updatePin} onBackToMenu={back} />
       );
     } else if (mode === AppMode.REWARDS_POS) {
-      screen = <RewardsPosScreen user={user} rewardItems={state.rewards} onRedeemItem={kiosk.redeemRewardItem} onBackToMenu={back} />;
+      screen = <RewardsPosScreen wide={compact} user={user} rewardItems={state.rewards} onRedeemItem={kiosk.redeemRewardItem} onBackToMenu={back} />;
     } else if (mode === AppMode.DEPOSIT) {
       screen = (
         <DepositScreen
+          wide={compact}
           user={user}
           categories={state.categories}
           ausy={state.ausy}
@@ -109,17 +114,17 @@ function Kiosk() {
         />
       );
     } else if (mode === AppMode.POINT_CONVERSION) {
-      screen = <PointConversionScreen user={user} categories={state.categories} rewardItems={state.rewards} onBackToMenu={back} />;
+      screen = <PointConversionScreen wide={compact} user={user} categories={state.categories} rewardItems={state.rewards} onBackToMenu={back} />;
     }
   }
 
   return (
-    <View style={s.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.surfaceBg} translucent />
-      <KioskHeader currentMode={mode} user={user} onLogout={() => kiosk.logoutSession()} topInset={insets.top} />
+    <View style={[s.root, { paddingLeft: insets.left, paddingRight: insets.right }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.surfaceBg} translucent hidden={compact} />
+      <KioskHeader currentMode={mode} user={user} onLogout={() => kiosk.logoutSession()} topInset={insets.top} compact={compact} />
       <View style={[s.body, { paddingBottom: insets.bottom }]}>
-        <BannerNotification message={state.banner} onDismiss={kiosk.clearBanner} />
         {screen}
+        <BannerNotification message={state.banner} onDismiss={kiosk.clearBanner} />
       </View>
     </View>
   );

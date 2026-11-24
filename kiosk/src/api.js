@@ -92,5 +92,5 @@ export const api = {
     if (!/^\d{6}$/.test(newPin)) return Promise.reject(new ApiError('PIN must be 6 digits.'));
     return call('PUT', '/api/kiosk/pin', { pin: newPin }).then(() => true);
   },
-  redeem: (item) => call('POST', '/api/kiosk/redeem', { itemId: item.id, idempotencyKey: newIdempotencyKey() }),
+  redeem: (item, idempotencyKey = newIdempotencyKey()) => call('POST', '/api/kiosk/redeem', { itemId: item.id, idempotencyKey }),
 };
