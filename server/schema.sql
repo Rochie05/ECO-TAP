@@ -10,6 +10,15 @@ CREATE TABLE IF NOT EXISTS stations (
   id text PRIMARY KEY, location text NOT NULL, status text NOT NULL,
   last_sync text NOT NULL, deposits_today integer NOT NULL DEFAULT 0
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS collector_card_uid text;
+CREATE UNIQUE INDEX IF NOT EXISTS users_collector_card_uid_idx ON users (collector_card_uid)
+  WHERE collector_card_uid IS NOT NULL;
+CREATE TABLE IF NOT EXISTS staff_kiosk_assignments (
+  username text NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+  station_id text NOT NULL REFERENCES stations(id) ON DELETE CASCADE,
+  PRIMARY KEY (username, station_id)
+);
+ALTER TABLE staff_kiosk_assignments ENABLE ROW LEVEL SECURITY;
 CREATE TABLE IF NOT EXISTS bins (
   station_id text NOT NULL REFERENCES stations(id), section text NOT NULL,
   label text NOT NULL, capacity double precision NOT NULL, weight double precision NOT NULL,

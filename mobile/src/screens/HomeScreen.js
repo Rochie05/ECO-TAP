@@ -14,7 +14,7 @@ export default function HomeScreen({ resident, deposits, stations, stationsError
         <Text style={st.heroLabel}>YOUR REWARD BALANCE</Text>
         <View style={st.pointsLine}><Text style={st.points}>{resident.ecoPoints}</Text><Text style={st.pointsUnit}>points</Text></View>
         <Text style={st.heroCopy}>Turn plastic into something positive.</Text>
-        <Button kind="light" onPress={() => goTo('rewards')} style={{ alignSelf: 'flex-start', marginTop: 22 }}>Explore rewards  →</Button>
+        <Button kind="light" onPress={() => goTo('rewards')} style={{ alignSelf: 'flex-start', marginTop: 22 }}>Explore rewards</Button>
       </View>
       <View style={st.statGrid}>
         <Card style={st.statCard}><Text style={st.statIcon}>♻</Text><Text style={st.statValue}>{resident.totalWasteKg.toFixed(1)} kg</Text><Text style={st.statLabel}>Plastic collected</Text></Card>

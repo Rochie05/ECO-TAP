@@ -5,7 +5,6 @@ import LoadingScreen from './components/LoadingScreen.jsx';
 import Login from './views/Login.jsx';
 import Dashboard from './views/Dashboard.jsx';
 import Bins from './views/Bins.jsx';
-import Grinding from './views/Grinding.jsx';
 import Logs from './views/Logs.jsx';
 import Rewards from './views/Rewards.jsx';
 import Notifications from './views/Notifications.jsx';
@@ -71,7 +70,8 @@ function App() {
   if (!data) return <main className="center-screen"><div className="login-card"><p>Could not load the portal data.</p><button className="button" onClick={() => refresh().catch((err) => setError(err.message))}>Try again</button>{error && <p role="alert">{error}</p>}</div></main>;
 
   const isSuperadmin = user.role === 'Superadmin';
-  const nav = NAV.filter(([id]) => id !== 'accounts' || isSuperadmin);
+  const canManageAccounts = isSuperadmin || user.role === 'Administrator';
+  const nav = NAV.filter(([id]) => id !== 'accounts' || canManageAccounts);
   const title = nav.find(([id]) => id === view)?.[1] || 'Overview';
   const canEditResidents = ['administrator', 'superadmin'].includes(String(user.role).toLowerCase());
   const unread = data.notifications?.length || 0;
@@ -101,13 +101,12 @@ function App() {
           {view === 'residents' && <Residents data={data} busy={busy} act={act} canEdit={canEditResidents} />}
           {view === 'beneficiaries' && <Beneficiaries data={data} busy={busy} act={act} canManage={canManage} />}
           {view === 'bins' && <Bins data={data} busy={busy} act={act} canManage={canManage} />}
-          {view === 'grinding' && <Grinding data={data} busy={busy} act={act} canManage={canManage} />}
           {view === 'logs' && <Logs data={data} />}
           {view === 'rewards' && <Rewards data={data} busy={busy} act={act} />}
           {view === 'notifications' && <Notifications data={data} />}
           {view === 'upcycle' && <Upcycle data={data} busy={busy} act={act} canManage={canManage} />}
-          {view === 'staff' && <Staff data={data} />}
-          {view === 'accounts' && isSuperadmin && <Accounts data={data} busy={busy} act={act} />}
+          {view === 'staff' && <Staff data={data} onManageAccounts={canManageAccounts ? () => setView('accounts') : undefined} />}
+          {view === 'accounts' && canManageAccounts && <Accounts data={data} busy={busy} act={act} isSuperadmin={isSuperadmin} />}
         </div>
       </div>
     </main>

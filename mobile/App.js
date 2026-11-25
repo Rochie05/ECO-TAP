@@ -70,7 +70,11 @@ function Root() {
         loadAccount().catch(() => {});
       }
     } catch (error) {
-      if (current === session.current && hasToken()) setNotificationsError(error.message);
+      if (current === session.current && hasToken()) {
+        setNotificationsError(error.status === 404
+          ? 'Notifications are unavailable until the server update is deployed.'
+          : error.message);
+      }
     }
   }, [loadAccount]);
 

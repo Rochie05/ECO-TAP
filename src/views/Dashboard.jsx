@@ -20,7 +20,7 @@ export default function Dashboard({ data, setView }) {
         {bins.slice(0, 6).map(({ station, key, bin }) => <div className="capacity-row" key={`${station.id}-${key}`}><div className="capacity-copy"><strong>{station.id} · {key.toUpperCase()}</strong><span>{bin.label}</span></div><div className="capacity-meter" role="progressbar" aria-label={`${station.id} ${key} capacity`} aria-valuenow={bin.capacity} aria-valuemin="0" aria-valuemax="100"><span style={{ width: `${Math.min(100, bin.capacity)}%` }} /></div><span className="capacity-value">{bin.capacity}%</span></div>)}
       </Panel>
       <Panel title="Quick actions"><div className="quick-links">
-        {[["grinding", "Schedule grinding", "Plan a collection"], ["rewards", "Redeem rewards", "Process resident points"], ["notifications", "Review alerts", "Check kiosk updates"]].map(([id, label, sub]) => <button key={id} className="quick-link" onClick={() => setView(id)}><span><strong>{label}</strong><small>{sub}</small></span><span aria-hidden="true">→</span></button>)}
+        {[["beneficiaries", "Record a handover", "Dispatch or track a collection batch"], ["rewards", "Redeem rewards", "Process resident points"], ["notifications", "Review alerts", "Check kiosk updates"]].map(([id, label, sub]) => <button key={id} className="quick-link" onClick={() => setView(id)}><span><strong>{label}</strong><small>{sub}</small></span><span aria-hidden="true">→</span></button>)}
       </div></Panel>
     </div>
     <Panel title="Recent deposits" action={<button className="text-button" onClick={() => setView('logs')}>View logs →</button>}><LogTable logs={recent} /></Panel>

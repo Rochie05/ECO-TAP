@@ -59,7 +59,7 @@ The `mobile/` folder is the Android app for residents. It signs in with the NFC 
 
 The only built-in account is `superadmin` (role Superadmin, password `Admin1!`). **Change that password** (or delete the account from the database and recreate it with a stronger one) before exposing this anywhere. Sign in as superadmin and open **Accounts** to create Collector, Supervisor, and Administrator users, change their roles, reset passwords, or delete them.
 
-The portal includes kiosk monitoring and scans, grinding schedules, collection logs, rewards redemption, notifications, upcycled-output estimates, and a staff directory. Supervisor actions are restricted by the local API.
+The portal includes kiosk monitoring and scans, batch handovers, collection logs, rewards redemption, notifications, upcycled-output estimates, and a staff directory. Supervisor actions are restricted by the local API.
 
 Data is stored in your Supabase Postgres database and persists across reloads and restarts. This is a prototype; it is not suitable for real accounts, rewards, or personal data. The API binds to localhost only. NFC hardware is not wired up, and kiosk scans are simulated.
 

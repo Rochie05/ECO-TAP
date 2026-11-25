@@ -36,7 +36,7 @@ export function SectionTitle({ eyebrow, title, action, onAction }) {
         {eyebrow ? <Text style={s.eyebrow}>{eyebrow}</Text> : null}
         <Text style={s.sectionTitle}>{title}</Text>
       </View>
-      {action ? <Pressable accessibilityRole="button" onPress={onAction}><Text style={s.textLink}>{action} →</Text></Pressable> : null}
+      {action ? <Pressable accessibilityRole="button" onPress={onAction}><Text style={s.textLink}>{action}</Text></Pressable> : null}
     </View>
   );
 }

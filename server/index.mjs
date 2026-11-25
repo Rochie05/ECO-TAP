@@ -71,6 +71,12 @@ const sessions = new Map();
 const loginFailures = new Map();
 const cookieName = 'ecotap_session';
 const ROLES = ['Collector', 'Supervisor', 'Administrator'];
+const PORTAL_ROLES = ['Supervisor', 'Administrator', 'Superadmin'];
+const ACCOUNT_MANAGERS = ['Administrator', 'Superadmin'];
+
+function manageableRoles(user) {
+  return user.role === 'Superadmin' ? ROLES : ['Collector', 'Supervisor'];
+}
 
 function json(res, status, value, headers = {}) {
   const body = JSON.stringify(value);
@@ -115,6 +121,10 @@ async function sessionUser(req) {
   if (!username) fail(401, 'Sign in to continue.');
   const [user] = await sql`SELECT username,name,initials,role,status FROM users WHERE username=${username}`;
   if (!user || user.status === 'terminated') fail(401, 'Session is no longer valid. Please sign in again.');
+  if (!PORTAL_ROLES.includes(user.role)) {
+    sessions.delete(token);
+    fail(403, 'Collectors use their assigned machines and cannot sign in to the staff portal.');
+  }
   return user;
 }
 
@@ -127,20 +137,11 @@ function textField(value, label, max = 160) {
   return value.trim();
 }
 
-function displaySchedule(row) {
-  return {
-    id: row.id, station: row.station, bins: JSON.parse(row.bins_json),
-    scheduledFor: row.scheduled_for, status: row.status,
-    assignedStaff: row.assigned_staff, note: row.note,
-  };
-}
-
 async function bootstrap(user) {
-  const [stationRows, binRows, logRows, scheduleRows, residentRows, rewardItems, redemptionRows, staffRows, noticeRows, categoryRows, beneficiaryRows, transferRows, batchRows] = await Promise.all([
+  const [stationRows, binRows, logRows, residentRows, rewardItems, redemptionRows, staffRows, noticeRows, categoryRows, beneficiaryRows, transferRows, batchRows] = await Promise.all([
     sql`SELECT * FROM stations ORDER BY id`,
     sql`SELECT * FROM bins ORDER BY station_id, section`,
     sql`SELECT * FROM logs ORDER BY "time" COLLATE "C" DESC, id DESC`,
-    sql`SELECT * FROM grinding_schedules ORDER BY scheduled_for COLLATE "C" DESC`,
     sql`SELECT * FROM residents ORDER BY name`,
     sql`SELECT id,name,cost FROM rewards ORDER BY id`,
     sql`SELECT * FROM redemptions ORDER BY "time" COLLATE "C" DESC`,
@@ -163,7 +164,7 @@ async function bootstrap(user) {
     const bins = Object.fromEntries(binRows.filter((bin) => bin.station_id === station.id)
       .map((bin) => [bin.section, {
         label: bin.label, capacity: bin.capacity, weight: bin.weight,
-        grindable: Boolean(bin.grindable), grindingStatus: bin.grinding_status,
+        grindable: Boolean(bin.grindable),
       }]));
     return { id: station.id, location: station.location, status: station.status, lastSync: station.last_sync, depositsToday: station.deposits_today, bins };
   });
@@ -172,7 +173,6 @@ async function bootstrap(user) {
     material: row.material, subtype: row.subtype, weight: row.weight,
     points: row.points, time: row.time, source: row.source,
   }));
-  const grindingSchedules = scheduleRows.map(displaySchedule);
   const residents = residentRows.map((row) => ({
     id: row.id, name: row.name, points: row.points, phone: row.phone, address: row.address || '',
     nfcCardId: row.nfc_card_id || '', status: row.status || 'active', registeredAt: row.registered_at || '',
@@ -206,10 +206,17 @@ async function bootstrap(user) {
     pointsAwarded: logs.reduce((total, log) => total + log.points, 0),
     fullBins: allBins.filter((bin) => bin.capacity >= 100).length,
   };
-  const users = user.role === 'Superadmin'
-    ? (await sql`SELECT username,name,initials,role,status FROM users ORDER BY (role='Superadmin') DESC, username`).map((row) => ({ username: row.username, name: row.name, initials: row.initials, role: row.role, status: row.status }))
+  const users = ACCOUNT_MANAGERS.includes(user.role)
+    ? (await sql`SELECT u.username,u.name,u.initials,u.role,u.status,u.collector_card_uid,
+        (SELECT json_agg(a.station_id ORDER BY a.station_id)::text FROM staff_kiosk_assignments a
+          WHERE a.username=u.username) AS kiosk_ids
+        FROM users u WHERE ${user.role === 'Superadmin'} OR u.role IN ('Collector','Supervisor')
+        ORDER BY (u.role='Superadmin') DESC, u.username`).map((row) => ({
+        username: row.username, name: row.name, initials: row.initials, role: row.role, status: row.status,
+        collectorCardUid: row.collector_card_uid, assignedKiosks: JSON.parse(row.kiosk_ids || '[]'),
+      }))
     : undefined;
-  return { user, users, stats, stations, grindingSchedules, logs, residents, rewardItems: [...rewardItems], redemptions, notifications, staff, upcycleYield: yields, wasteCategories, beneficiaries, wasteTransfers, unshippedBatches };
+  return { user, users, stats, stations, logs, residents, rewardItems: [...rewardItems], redemptions, notifications, staff, upcycleYield: yields, wasteCategories, beneficiaries, wasteTransfers, unshippedBatches };
 }
 
 function createId(prefix) { return `${prefix}-${randomBytes(4).toString('hex').toUpperCase()}`; }
@@ -237,6 +244,7 @@ async function handleLogin(req, res, body) {
   }
   loginFailures.delete(key);
   if (user.status === 'terminated') return json(res, 403, { error: 'This account has been terminated. Contact the superadmin.' });
+  if (!PORTAL_ROLES.includes(user.role)) return json(res, 403, { error: 'Collectors use their assigned machines and cannot sign in to the staff portal.' });
   const token = randomBytes(32).toString('hex');
   sessions.set(token, user.username);
   const cleanUser = { username: user.username, name: user.name, initials: user.initials, role: user.role };
@@ -254,40 +262,86 @@ function validPassword(value) {
   return value;
 }
 
-function validRole(value) {
+function validRole(user, value) {
   if (!ROLES.includes(value)) fail(400, `Role must be one of: ${ROLES.join(', ')}.`);
+  if (!manageableRoles(user).includes(value)) fail(403, 'Only the superadmin can assign the Administrator role.');
   return value;
 }
 
+function collectorCardUid(value) {
+  const uid = textField(value, 'Collector card UID', 80).toUpperCase()
+    .replace(/^ECO-TAP-/, '').replace(/[:\s-]/g, '');
+  if (!/^(?:[0-9A-F]{2}){2,16}$/.test(uid)) fail(400, 'Enter the hexadecimal UID read from the collector card.');
+  return uid;
+}
+
+async function replaceKioskAssignments(tx, username, assignedKiosks) {
+  if (!Array.isArray(assignedKiosks)) fail(400, 'Choose kiosks from the station list.');
+  const ids = [...new Set(assignedKiosks.map((id) => textField(id, 'Kiosk ID', 80)))];
+  await tx`DELETE FROM staff_kiosk_assignments WHERE username=${username}`;
+  const assignments = await tx`INSERT INTO staff_kiosk_assignments (username,station_id)
+    SELECT ${username},s.id FROM stations s WHERE s.id IN (
+      SELECT jsonb_array_elements_text(${JSON.stringify(ids)}::jsonb)
+    ) RETURNING station_id`;
+  if (assignments.length !== ids.length) fail(400, 'One or more selected kiosks are unavailable.');
+}
+
+function accountConflict(error) {
+  const constraint = error.constraint_name || error.constraint;
+  if (error.code === '23505' && constraint === 'users_collector_card_uid_idx') fail(409, 'That collector card is already assigned.');
+  if (error.code === '23505' && constraint === 'users_username_key') fail(409, 'That username is already in use.');
+  throw error;
+}
+
 async function handleUserCreate(user, body) {
-  requireRole(user, ['Superadmin']);
+  requireRole(user, ACCOUNT_MANAGERS);
   const username = textField(body.username, 'Username', 40).toLowerCase();
   if (!/^[a-z0-9._-]+$/.test(username)) fail(400, 'Username may only use letters, numbers, dots, dashes and underscores.');
   const name = textField(body.name, 'Name', 100);
-  const role = validRole(body.role);
-  const password = validPassword(body.password);
-  const [taken] = await sql`SELECT 1 AS ok FROM users WHERE username=${username}`;
-  if (taken) fail(409, 'That username is already in use.');
-  await sql`INSERT INTO users ${sql({ id: randomBytes(8).toString('hex'), username, ...hashPassword(password), name, initials: initialsFor(name), role })}`;
+  const role = validRole(user, body.role);
+  const password = role === 'Collector' ? randomBytes(32).toString('hex') : validPassword(body.password);
+  const uid = role === 'Collector' && body.collectorCardUid ? collectorCardUid(body.collectorCardUid) : null;
+  const { password_salt, password_hash } = hashPassword(password);
+  try {
+    await sql.begin(async (tx) => {
+      await tx`INSERT INTO users (id,username,password_salt,password_hash,name,initials,role,collector_card_uid)
+        VALUES (${randomBytes(8).toString('hex')},${username},${password_salt},${password_hash},${name},${initialsFor(name)},${role},${uid})`;
+      if (body.assignedKiosks !== undefined) await replaceKioskAssignments(tx, username, body.assignedKiosks);
+    });
+  } catch (error) { accountConflict(error); }
   return { username, name, initials: initialsFor(name), role };
 }
 
 async function handleUserUpdate(user, username, body) {
-  requireRole(user, ['Superadmin']);
-  const [target] = await sql`SELECT username,name,role FROM users WHERE username=${username}`;
-  if (!target) fail(404, 'Account not found.');
-  if (target.role === 'Superadmin') fail(403, 'The superadmin account cannot be edited here.');
-  const changes = {};
-  if (body.name !== undefined) { changes.name = textField(body.name, 'Name', 100); changes.initials = initialsFor(changes.name); }
-  if (body.role !== undefined) changes.role = validRole(body.role);
-  if (body.status !== undefined) {
-    if (!['active', 'terminated'].includes(body.status)) fail(400, 'Status must be active or terminated.');
-    changes.status = body.status;
-  }
-  if (body.password !== undefined) Object.assign(changes, hashPassword(validPassword(body.password)));
-  if (!Object.keys(changes).length) fail(400, 'Nothing to update.');
-  await sql`UPDATE users SET ${sql(changes)} WHERE username=${username}`;
-  if (changes.password_hash || changes.role || changes.status === 'terminated') {
+  requireRole(user, ACCOUNT_MANAGERS);
+  try {
+    await sql.begin(async (tx) => {
+      const [target] = await tx`SELECT role FROM users WHERE username=${username} FOR UPDATE`;
+      if (!target) fail(404, 'Account not found.');
+      if (!manageableRoles(user).includes(target.role)) fail(403, 'You cannot edit that account.');
+      const changes = {};
+      const nextRole = body.role === undefined ? target.role : validRole(user, body.role);
+      if (body.name !== undefined) { changes.name = textField(body.name, 'Name', 100); changes.initials = initialsFor(changes.name); }
+      if (nextRole !== target.role) {
+        changes.role = nextRole;
+        if (nextRole !== 'Collector') changes.collector_card_uid = null;
+        if (target.role === 'Collector' && body.password === undefined) fail(400, 'Set a password when granting portal access.');
+      }
+      if (body.collectorCardUid !== undefined) {
+        if (nextRole !== 'Collector' && body.collectorCardUid) fail(400, 'A collection card can only be assigned to a Collector.');
+        changes.collector_card_uid = body.collectorCardUid ? collectorCardUid(body.collectorCardUid) : null;
+      }
+      if (body.status !== undefined) {
+        if (!['active', 'terminated'].includes(body.status)) fail(400, 'Status must be active or terminated.');
+        changes.status = body.status;
+      }
+      if (body.password !== undefined) Object.assign(changes, hashPassword(validPassword(body.password)));
+      if (Object.keys(changes).length) await tx`UPDATE users SET ${tx(changes)} WHERE username=${username}`;
+      if (body.assignedKiosks !== undefined) await replaceKioskAssignments(tx, username, body.assignedKiosks);
+      else if (!Object.keys(changes).length) fail(400, 'Nothing to update.');
+    });
+  } catch (error) { accountConflict(error); }
+  if (body.password !== undefined || body.role !== undefined || body.status === 'terminated') {
     for (const [token, name] of sessions) if (name === username) sessions.delete(token);
   }
   return { username };
@@ -301,48 +355,6 @@ async function handleUserDelete(user, username) {
   await sql`DELETE FROM users WHERE username=${username}`;
   for (const [token, name] of sessions) if (name === username) sessions.delete(token);
   return { username, deleted: true };
-}
-
-async function handleScheduleCreate(user, body) {
-  requireRole(user, ['Supervisor', 'Administrator', 'Superadmin']);
-  const station = textField(body.station, 'Station', 20);
-  const [stationRow] = await sql`SELECT id FROM stations WHERE id=${station}`;
-  if (!stationRow) fail(400, 'Choose a valid kiosk station.');
-  if (!Array.isArray(body.bins) || body.bins.length < 1 || body.bins.length > 2 || body.bins.some((bin) => !['b1', 'b2'].includes(bin)) || new Set(body.bins).size !== body.bins.length) fail(400, 'Choose one or more valid grindable sections.');
-  const scheduledFor = textField(body.scheduledFor, 'Schedule time', 32).replace('T', ' ');
-  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(scheduledFor) || Number.isNaN(Date.parse(scheduledFor.replace(' ', 'T')))) fail(400, 'Enter a valid date and time.');
-  const assignedStaff = textField(body.assignedStaff, 'Assigned staff', 100);
-  const [staffRow] = await sql`SELECT id FROM staff WHERE name=${assignedStaff}`;
-  if (!staffRow) fail(400, 'Choose a staff member from the list.');
-  const note = typeof body.note === 'string' ? body.note.trim().slice(0, 300) : '';
-  const id = createId('G');
-  await sql.begin(async (tx) => {
-    await tx`INSERT INTO grinding_schedules (id,station,bins_json,scheduled_for,status,assigned_staff,note) VALUES (${id},${station},${JSON.stringify(body.bins)},${scheduledFor},'scheduled',${assignedStaff},${note || `Scheduled by ${user.name}`})`;
-    await notify(tx, 'info', 'residents+partner', `Grinding Scheduled — ${station}`, `Grinding of ${body.bins.join(', ')} at ${station} is scheduled for ${scheduledFor}. Partner company has been notified to prepare collection.`);
-  });
-  const [row] = await sql`SELECT * FROM grinding_schedules WHERE id=${id}`;
-  return displaySchedule(row);
-}
-
-async function handleScheduleUpdate(user, id, body) {
-  requireRole(user, ['Supervisor', 'Administrator', 'Superadmin']);
-  if (!['completed', 'missed'].includes(body.status)) fail(400, 'Status must be completed or missed.');
-  await sql.begin(async (tx) => {
-    const [schedule] = await tx`SELECT * FROM grinding_schedules WHERE id=${id} FOR UPDATE`;
-    if (!schedule) fail(404, 'Schedule not found.');
-    if (schedule.status !== 'scheduled') fail(409, 'Only scheduled work can be updated.');
-    await tx`UPDATE grinding_schedules SET status=${body.status} WHERE id=${id}`;
-    if (body.status === 'completed') {
-      const sections = JSON.parse(schedule.bins_json).sort();
-      for (const section of sections) {
-        await tx`SELECT section FROM bins WHERE station_id=${schedule.station} AND section=${section} FOR UPDATE`;
-      }
-      for (const section of sections) await sealBinBatch(tx, schedule.station, section);
-      await notify(tx, 'info', 'partner+residents', `Grinding Completed — ${schedule.station}`, 'Grinded plastic is ready for collection. Partner company notified. Residents can view new upcycled output estimates.');
-    }
-  });
-  const [row] = await sql`SELECT * FROM grinding_schedules WHERE id=${id}`;
-  return displaySchedule(row);
 }
 
 async function handleRedemption(user, body) {
@@ -395,7 +407,7 @@ async function handleScan(user, body) {
       const title = `Bin Full — ${bin.station} · ${bin.section.toUpperCase()}`;
       const [alreadyReported] = await tx`SELECT id FROM notifications WHERE type='crit' AND title=${title} AND substr("time",1,10)=substr(${stamp()}::text,1,10)`;
       if (!alreadyReported) {
-        await notify(tx, 'crit', 'residents+partner', title, `${bin.label} bin at ${bin.location} is full. Schedule grinding and coordinate collection with the partner company.`);
+        await notify(tx, 'crit', 'residents+partner', title, `${bin.label} bin at ${bin.location} is full. Coordinate pickup and record the handover under Beneficiaries.`);
         alerts.push(title);
       }
     }
@@ -410,14 +422,14 @@ async function handleUpcycleNotice(user, body) {
   if (!['residents', 'partner'].includes(body.target)) fail(400, 'Choose residents or partner as the target.');
   const totals = await sql`SELECT section,SUM(weight) AS kg FROM bins WHERE grindable=1 GROUP BY section`;
   const amount = totals.reduce((sum, row) => sum + row.kg, 0);
-  if (amount <= 0) fail(409, 'There is no grindable plastic available yet.');
+  if (amount <= 0) fail(409, 'There is no ground plastic available yet.');
   const bySection = Object.fromEntries(totals.map((row) => [row.section, row.kg]));
   const products = yields.map((item) => ({ ...item, count: Math.floor(amount / item.kgPerUnit) })).filter((item) => item.count > 0);
   const summary = products.map((item) => `${item.count} ${item.product}`).join(', ');
   const title = body.target === 'partner' ? `Grindable Batch Ready — ${amount.toFixed(1)} kg` : 'New Upcycled Output Estimate';
   const message = body.target === 'partner'
-    ? `Partner GreenCycle Recycling Corp.: ${amount.toFixed(1)} kg of grindable plastic (PET ${(bySection.b1 || 0).toFixed(1)} kg, HDPE ${(bySection.b2 || 0).toFixed(1)} kg) is available for pickup at QC Hall kiosks.`
-    : `Based on ${amount.toFixed(1)} kg of grindable plastic currently collected, approximately ${summary} can be produced. Thank you for segregating!`;
+    ? `Partner GreenCycle Recycling Corp.: ${amount.toFixed(1)} kg of ground plastic (PET ${(bySection.b1 || 0).toFixed(1)} kg, HDPE ${(bySection.b2 || 0).toFixed(1)} kg) is available for pickup at QC Hall kiosks.`
+    : `Based on ${amount.toFixed(1)} kg of ground plastic currently collected, approximately ${summary} can be produced. Thank you for segregating!`;
   const id = await notify(sql, 'info', body.target, title, message);
   return { id, title, target: body.target };
 }
@@ -600,6 +612,11 @@ async function kioskApi(req, res, pathname) {
   const method = req.method;
   // The machine controller (load cell + optical sensor) has its own per-station key, not the tablet's.
   if (method === 'POST' && pathname === '/api/kiosk/device/deposit-event') return json(res, 201, await handleDeviceDepositEvent(req, await bodyJson(req)));
+  if (method === 'POST' && pathname === '/api/kiosk/device/collection-access') {
+    const stationId = requireDeviceKey(req, 'collection-access');
+    const { cardUid } = await bodyJson(req);
+    return json(res, 200, await authorizeCollectionAccess(stationId, cardUid));
+  }
   requireKioskKey(req);
   if (method === 'GET' && pathname === '/api/kiosk/health') return json(res, 200, { ok: true });
   if (method === 'GET' && pathname === '/api/kiosk/rewards') {
@@ -727,20 +744,31 @@ async function handleDepositCancel(residentId, sessionId) {
   return { ok: true };
 }
 
-function requireDeviceKey(req) {
+function requireDeviceKey(req, action = 'deposit') {
   const keys = new Map(String(process.env.DEVICE_KEYS || '').split(',').map((pair) => pair.trim()).filter(Boolean)
     .map((pair) => { const i = pair.indexOf(':'); return [pair.slice(0, i).trim(), pair.slice(i + 1).trim()]; }));
-  if (!keys.size) fail(503, 'Machine deposit events are disabled. Set DEVICE_KEYS in .env and restart the server.');
+  if (!keys.size) fail(503, 'Machine access is disabled. Set DEVICE_KEYS in .env and restart the server.');
   const station = String(req.headers['x-station-id'] || '').trim();
   const expected = keys.get(station) || '';
   const ok = timingSafeEqual(digest(req.headers['x-device-key'] || ''), digest(expected || randomBytes(16)));
   if (!expected || !ok) fail(401, 'This machine is not authorised.');
   const now = Date.now();
-  const recent = (deviceEventTimes.get(station) || []).filter((t) => now - t < 60_000);
+  const bucket = `${station}:${action}`;
+  const recent = (deviceEventTimes.get(bucket) || []).filter((t) => now - t < 60_000);
   if (recent.length >= 30) fail(429, 'Too many machine events. Slow down.');
   recent.push(now);
-  deviceEventTimes.set(station, recent);
+  deviceEventTimes.set(bucket, recent);
   return station;
+}
+
+async function authorizeCollectionAccess(stationId, cardUid) {
+  const uid = collectorCardUid(cardUid);
+  const [collector] = await sql`SELECT u.username FROM users u
+    JOIN staff_kiosk_assignments a ON a.username=u.username
+    WHERE a.station_id=${stationId} AND u.collector_card_uid=${uid}
+      AND u.role='Collector' AND u.status='active'`;
+  if (!collector) fail(403, 'Card is not authorized for bin collection at this kiosk.');
+  return { authorized: true, action: 'bin_collection', stationId, expiresAt: Date.now() + 10000 };
 }
 
 // The ONLY place a deposit is logged. Weight and material come from the machine, never from a resident.
@@ -1089,13 +1117,13 @@ async function api(req, res, pathname) {
   if (req.method === 'POST' && transferMatch) return json(res, 200, await handleTransferReceive(user, transferMatch[1]));
   const batchUpdateMatch = pathname.match(/^\/api\/waste-transfers\/([A-Za-z0-9-]+)\/batch-updates$/);
   if (req.method === 'POST' && batchUpdateMatch) return json(res, 201, await handleBatchUpdate(user, batchUpdateMatch[1], await bodyJson(req)));
-  if (req.method === 'POST' && pathname === '/api/grinding-schedules') return json(res, 201, { schedule: await handleScheduleCreate(user, await bodyJson(req)) });
-  const scheduleMatch = pathname.match(/^\/api\/grinding-schedules\/([A-Za-z0-9-]+)$/);
-  if (req.method === 'PATCH' && scheduleMatch) return json(res, 200, { schedule: await handleScheduleUpdate(user, scheduleMatch[1], await bodyJson(req)) });
+  if (pathname === '/api/grinding-schedules' || pathname.startsWith('/api/grinding-schedules/')) {
+    return json(res, 410, { error: 'The machine grinds bottles automatically. Record collection under Beneficiaries.' });
+  }
   if (req.method === 'POST' && pathname === '/api/redemptions') return json(res, 201, { redemption: await handleRedemption(user, await bodyJson(req)) });
   const redemptionMatch = pathname.match(/^\/api\/redemptions\/([A-Za-z0-9-]+)$/);
   if (req.method === 'PATCH' && redemptionMatch) {
-    if (!['Collector', 'Supervisor', 'Administrator', 'Superadmin'].includes(user.role)) fail(403, 'Your account cannot fulfill redemptions.');
+    requireRole(user, PORTAL_ROLES);
     const body = await bodyJson(req);
     if (body.status !== 'fulfilled') fail(400, 'Status must be fulfilled.');
     const result = await sql`UPDATE redemptions SET status='fulfilled' WHERE id=${redemptionMatch[1]} AND status='pending' RETURNING id`;
